@@ -42,7 +42,6 @@ COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
-USER nextjs
+COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node server.js"]
+CMD ["/app/docker-entrypoint.sh"]
