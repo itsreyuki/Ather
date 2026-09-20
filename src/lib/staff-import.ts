@@ -112,12 +112,15 @@ export async function readStaffImportFile(file: File) {
 function isPdfRecordIdentifier(line: string) {
   const value = line.replace(/\s+/g, "");
   if (/^(?:966|05)\d{7,12}$/.test(value)) return false;
-  return /^\d{8,11}$/.test(value) || /^(?=.*[A-Za-z])[A-Za-z0-9_]{6,32}$/.test(value);
+  return /^\d{8,11}$/.test(value) || /^(?=.*[A-Za-z])[A-Za-z][A-Za-z0-9_.-]{5,63}$/.test(value);
 }
 
 function isPdfPhone(line: string) {
-  return /^(?:\+?966|\+?05)\d{7,12}$/.test(line.replace(/[\s()-]/g, ""));
+  return /^(?:\+?966\d{9}|\+?05\d{8,9})$/.test(line.replace(/[\s()-]/g, ""));
 }
+
+const pdfRecordIdentifierPattern = /(?<![A-Za-z0-9_.-])(?:\d{8,11}(?!\d)|[A-Za-z][A-Za-z0-9_.-]{5,63}(?![A-Za-z0-9_.-]))/gu;
+const pdfPhonePattern = /(?:\+?966\d{9}|\+?05\d{8,9})/;
 
 function normalizeNoorPdfArabic(value: string) {
   return value
@@ -130,6 +133,16 @@ function normalizeNoorPdfArabic(value: string) {
 
 function restoreNoorPdfRtlLine(value: string) {
   return normalizeNoorPdfArabic(value).split(/\s+/).filter(Boolean).reverse().join(" ");
+}
+
+function restoreNoorPdfName(value: string) {
+  const words = normalizeNoorPdfArabic(value).split(/\s+/).filter(Boolean);
+  if (!words.length) return "";
+  // Some Noor PDF text layers return a short visual-order fragment such as
+  // "تجريبي معلم". Real names in the current export are returned in reading
+  // order, so reverse only when the final token is clearly a job title.
+  const titleAtEnd = /^(?:معلم|معلمة|إداري|إدارية|وكيل|وكيلة|مرشد|مرشدة|مدير|مديرة|قائد|قائدة)$/u.test(words.at(-1) ?? "");
+  return (titleAtEnd ? words.reverse() : words).join(" ");
 }
 
 const noorPdfSpecializations = [
@@ -194,24 +207,30 @@ function parseNoorPdfColumns(value: string) {
 
 /** Converts the row-oriented text layer of Noor's PDF table into import rows. */
 export function parseNoorPdfRows(text: string) {
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const starts = lines.map((line, index) => isPdfRecordIdentifier(line) ? index : -1).filter((index) => index >= 0);
+  // PDF text extraction is not consistent: depending on column positions it
+  // may return a whole row on one line or split the same row across lines.
+  // Flatten first, then split on record identifiers and locate the phone
+  // inside each segment instead of relying on line boundaries.
+  const flattened = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  const starts = [...flattened.matchAll(pdfRecordIdentifierPattern)].map((match) => ({ index: match.index ?? -1, identifier: match[0] })).filter((match) => match.index >= 0);
   const rows: string[][] = [];
   for (let startIndex = 0; startIndex < starts.length; startIndex += 1) {
-    const start = starts[startIndex];
-    const end = starts[startIndex + 1] ?? lines.length;
-    const segment = lines.slice(start, end);
-    const phoneIndex = segment.findIndex((line, index) => index > 0 && isPdfPhone(line));
-    if (phoneIndex < 1) continue;
-    const identifier = segment[0].replace(/\s+/g, "");
-    const fullName = segment.slice(1, phoneIndex).map(restoreNoorPdfRtlLine).join(" ");
+    const current = starts[startIndex];
+    const start = current.index + current.identifier.length;
+    const end = starts[startIndex + 1]?.index ?? flattened.length;
+    const segment = flattened.slice(start, end).trim();
+    const phoneMatch = segment.match(pdfPhonePattern);
+    if (!phoneMatch || phoneMatch.index === undefined) continue;
+    const phoneStart = phoneMatch.index;
+    const phone = phoneMatch[0];
+    const fullName = restoreNoorPdfName(segment.slice(0, phoneStart).trim());
     if (!fullName) continue;
-    const tail = segment.slice(phoneIndex + 1).join(" ");
+    const tail = segment.slice(phoneStart + phone.length).trim();
     const columns = parseNoorPdfColumns(tail);
     rows.push([
-      identifier,
+      current.identifier,
       fullName,
-      segment[phoneIndex].replace(/\s+/g, ""),
+      phone.replace(/\s+/g, ""),
       columns.employment,
       columns.jobTitle,
       columns.teachingField,

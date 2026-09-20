@@ -130,6 +130,19 @@ describe("impact metrics", () => {
     expect(rows[0]).toEqual(["1234567890", "معلم تجريبي", "966500000000", "دائم", "معلم", "رياضيات", "رياضيات"]);
   });
 
+  it("handles Noor PDF rows whose columns are extracted on one line", () => {
+    const rows = parseNoorPdfRows([
+      "اسم المستخدمالاسم الرباعيالجوال حالة التوظيف المسمى الوظيفي مجال التدريسالتخصص",
+      "1057704957آمال سعود عبد الله الغامدي966535801122 معلمالحاسب الآليحاسب",
+      "Emaan0711ايمان احمد عطية الغامدي966500503230دائممعلمأحياءأحياء",
+    ].join("\n"));
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.[0]).toBe("1057704957");
+    expect(rows[0]?.[1]).toContain("آمال سعود");
+    expect(rows[0]?.[2]).toBe("966535801122");
+    expect(rows[1]?.[0]).toBe("Emaan0711");
+  });
+
   it("separates specialization from the concatenated Noor PDF columns", () => {
     const rows = parseNoorPdfRows([
       "1057704957",
