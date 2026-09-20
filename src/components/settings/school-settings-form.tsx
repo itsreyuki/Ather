@@ -1,0 +1,12 @@
+"use client";
+
+import { Save } from "lucide-react";
+import { useState } from "react";
+
+type School = { name: string; educationAdministration: string; educationOffice: string | null; region: string; city: string; principalName: string };
+
+export function SchoolSettingsForm({ school }: { school: School }) {
+  const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(""); setError(""); const form = new FormData(event.currentTarget); const payload = Object.fromEntries(form.entries()); try { const response = await fetch("/api/dashboard/settings/school", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "تعذر حفظ بيانات المدرسة"); setMessage("تم حفظ بيانات المدرسة وتسجيل العملية"); } catch (caught) { setError(caught instanceof Error ? caught.message : "تعذر حفظ بيانات المدرسة"); } finally { setBusy(false); } }
+  return <form className="school-settings-form" onSubmit={submit}><div className="form-grid"><label className="field"><span>اسم المدرسة الرسمي</span><input name="name" defaultValue={school.name} required /></label><label className="field"><span>مدير المدرسة</span><input name="principalName" defaultValue={school.principalName} required /></label><label className="field"><span>إدارة التعليم</span><input name="educationAdministration" defaultValue={school.educationAdministration} required /></label><label className="field"><span>مكتب التعليم</span><input name="educationOffice" defaultValue={school.educationOffice ?? ""} /></label><label className="field"><span>المنطقة</span><input name="region" defaultValue={school.region} required /></label><label className="field"><span>المدينة / المحافظة</span><input name="city" defaultValue={school.city} required /></label><label className="field"><span>رقم التواصل الرسمي</span><input name="officialPhone" inputMode="tel" placeholder="اختياري" /></label></div>{error && <div className="form-error">{error}</div>}{message && <div className="form-success">{message}</div>}<button className="button button-secondary" type="submit" disabled={busy}><Save size={15} />{busy ? "جارٍ الحفظ..." : "حفظ بيانات المدرسة"}</button></form>;
+}

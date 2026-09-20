@@ -1,0 +1,41 @@
+name: athar-production
+
+services:
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file:
+      - ${ATHAR_ENV_FILE:-.env.production}
+    environment:
+      DATABASE_URL: file:/app/data/athar.db
+    volumes:
+      - athar_sqlite_data:/app/data
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    env_file:
+      - ${ATHAR_ENV_FILE:-.env.production}
+    environment:
+      DATABASE_URL: file:/app/data/athar.db
+    volumes:
+      - athar_sqlite_data:/app/data
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/readiness').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    init: true
+    restart: unless-stopped
+
+volumes:
+  athar_sqlite_data:

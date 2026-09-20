@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.env
+.env.local
+*.log
+prisma/generated
+backups/
+.env.production
+.env.staging
+data/
+*.db
+.tmp-report-pages/
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo

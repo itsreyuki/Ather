@@ -1,0 +1,12 @@
+"use client";
+
+import { Save } from "lucide-react";
+import { useState } from "react";
+
+type Settings = { auditRetentionDays: number; disabledStaffRetentionDays: number; piiRetentionMode: "REVIEW_REQUIRED" | "REDACT_ON_APPROVAL" };
+
+export function RetentionSettingsForm({ initial }: { initial: Settings }) {
+  const [settings, setSettings] = useState(initial); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
+  async function save(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(""); setError(""); try { const response = await fetch("/api/dashboard/settings/activity/retention", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(settings) }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "تعذر حفظ الإعدادات"); setSettings(data.settings); setMessage("تم حفظ الإعدادات"); } catch (caught) { setError(caught instanceof Error ? caught.message : "تعذر حفظ الإعدادات"); } finally { setBusy(false); } }
+  return <form className="retention-form" onSubmit={save}><div className="form-grid"><label className="field"><span>مدة حفظ سجل التدقيق (يومًا)</span><input type="number" min={30} max={3650} value={settings.auditRetentionDays} onChange={(event) => setSettings({ ...settings, auditRetentionDays: Number(event.target.value) })} /></label><label className="field"><span>مدة حفظ الموظف المعطّل (يومًا)</span><input type="number" min={30} max={3650} value={settings.disabledStaffRetentionDays} onChange={(event) => setSettings({ ...settings, disabledStaffRetentionDays: Number(event.target.value) })} /></label></div><label className="field"><span>سياسة PII بعد انتهاء المدة</span><select value={settings.piiRetentionMode} onChange={(event) => setSettings({ ...settings, piiRetentionMode: event.target.value as Settings["piiRetentionMode"] })}><option value="REVIEW_REQUIRED">مراجعة واعتماد يدوي مطلوب</option><option value="REDACT_ON_APPROVAL">إخفاء بعد موافقة صريحة</option></select></label><div className="retention-warning">لا يوجد حذف تلقائي. هذه الإعدادات تحدد سياسة المراجعة المستقبلية فقط، وأي إخفاء أو حذف يجب أن يتم بإجراء قانوني وموافقة واضحة.</div>{error && <div className="form-error">{error}</div>}{message && <div className="form-success">{message}</div>}<button className="button button-secondary" type="submit" disabled={busy}><Save size={15} />{busy ? "جارٍ الحفظ..." : "حفظ سياسة الاحتفاظ"}</button></form>;
+}

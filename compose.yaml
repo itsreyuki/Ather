@@ -1,0 +1,42 @@
+name: athar
+
+services:
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      DATABASE_URL: file:/app/data/athar.db
+    volumes:
+      - athar_sqlite_data:/app/data
+    restart: "no"
+
+  app:
+    profiles: ["full"]
+    build:
+      context: .
+      target: runner
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_URL: http://localhost:${APP_PORT:-3000}
+      NEXTAUTH_URL: http://localhost:${APP_PORT:-3000}
+      DATABASE_URL: file:/app/data/athar.db
+    volumes:
+      - athar_sqlite_data:/app/data
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/liveness').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  athar_sqlite_data:

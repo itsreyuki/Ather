@@ -1,0 +1,7 @@
+import { AlertTriangle, TrendingUp } from "lucide-react";
+import type { CriterionTrend } from "@/src/lib/reporting";
+
+const formatter = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 1 });
+export function CriterionTrends({ trends }: { trends: CriterionTrend[] }) {
+  return <section className="report-panel criterion-trends-panel"><div className="report-section-heading"><div><h2>اتجاه المعايير عبر الزمن</h2><p>تجميع وصفي للمعايير المتكررة حسب الاسم والمجال، اعتمادًا على التقارير المعتمدة.</p></div><TrendingUp size={19} color="var(--blue)" /></div>{trends.length === 0 ? <div className="reports-empty compact"><span>ستظهر الاتجاهات بعد تكرار معيار في تقريرين مكتملين أو أكثر.</span></div> : <div className="criterion-trends-list">{trends.map((trend) => <article className="criterion-trend-row" key={trend.key}><div className="criterion-trend-heading"><strong>{trend.name}</strong>{trend.followUp && <span className="criterion-follow-up"><AlertTriangle size={13} /> قد يستفيد هذا المجال من متابعة إضافية أو تدخل تدريبي مختلف.</span>}</div><div className="criterion-trend-points">{trend.points.map((point) => <div className="criterion-trend-point" key={`${trend.key}-${point.date.toISOString()}-${point.workshopTitle}`}><small>{point.label}</small><strong>{point.improvement === null ? "—" : `${formatter.format(point.improvement)}٪`}</strong><span>{point.workshopTitle}</span></div>)}</div></article>)}</div>}</section>;
+}

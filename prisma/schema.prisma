@@ -1,0 +1,575 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  SCHOOL_OWNER
+  SCHOOL_ADMIN
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum WorkshopStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  POST_ASSESSMENT_AVAILABLE
+  COMPLETED
+  CANCELLED
+}
+
+enum AssessmentPhase {
+  PRE
+  POST
+}
+
+enum AssessmentStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum OtpPurpose {
+  TEACHER_LOGIN
+}
+
+enum SchoolType {
+  GOVERNMENT
+  PRIVATE
+  OTHER
+}
+
+enum SchoolGender {
+  BOYS
+  GIRLS
+  MIXED
+  OTHER
+}
+
+enum SchoolSetupStatus {
+  SETUP_REQUIRED
+  ACTIVE
+}
+
+enum AuthChallengePurpose {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum StaffSource {
+  NOOR_IMPORT
+  MANUAL
+}
+
+enum StaffImportStatus {
+  PREVIEWED
+  COMMITTED
+  FAILED
+}
+
+enum WorkshopDeliveryMode {
+  IN_PERSON
+  REMOTE
+  HYBRID
+}
+
+enum FollowUpMeasurementStatus {
+  PLANNED
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum TeamInvitationChannel {
+  EMAIL
+  PHONE
+}
+
+enum PiiRetentionMode {
+  REVIEW_REQUIRED
+  REDACT_ON_APPROVAL
+}
+
+model User {
+  id             String            @id @default(cuid())
+  email          String?           @unique
+  phoneEncrypted String?
+  phoneLookupHash String? @unique
+  phoneLast4     String?
+  passwordHash   String?
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  memberships    SchoolMembership[]
+  auditLogs      AuditLog[]
+  sessions       Session[]
+  authChallenges AuthChallenge[]
+  sentTeamInvitations TeamInvitation[] @relation("TeamInvitationInviter")
+  privacySettingsUpdates SchoolPrivacySettings[] @relation("PrivacySettingsUpdater")
+  dashboardAlertDismissals DashboardAlertDismissal[]
+}
+
+model School {
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique
+  ministryCode String            @unique
+  educationAdministration String
+  educationOffice String?
+  region      String
+  city        String
+  educationStage String
+  schoolType  SchoolType
+  genderType  SchoolGender
+  principalName String
+  officialPhoneEncrypted String?
+  setupStatus SchoolSetupStatus @default(SETUP_REQUIRED)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  memberships SchoolMembership[]
+  staff       StaffMember[]
+  workshops   Workshop[]
+  imports     StaffImportBatch[]
+  templates   CriterionTemplate[]
+  workshopTemplates WorkshopTemplate[]
+  reports     ReportSnapshot[]
+  notifications Notification[]
+  teacherSessions TeacherSession[]
+  followUpMeasurements FollowUpMeasurement[]
+  teamInvitations TeamInvitation[]
+  privacySettings SchoolPrivacySettings?
+  dashboardAlertDismissals DashboardAlertDismissal[]
+}
+
+model DashboardAlertDismissal {
+  id               String   @id @default(cuid())
+  schoolId         String
+  alertKey         String
+  fingerprint      String
+  dismissedByUserId String?
+  dismissedAt      DateTime @default(now())
+  school           School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  dismissedBy      User?    @relation(fields: [dismissedByUserId], references: [id], onDelete: SetNull)
+  @@unique([schoolId, alertKey, fingerprint])
+  @@index([schoolId, dismissedAt])
+}
+
+model SchoolMembership {
+  id        String           @id @default(cuid())
+  userId    String
+  schoolId  String
+  role      UserRole
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school    School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@unique([userId, schoolId])
+  @@index([schoolId, status])
+}
+
+model TeamInvitation {
+  id              String                 @id @default(cuid())
+  schoolId        String
+  invitedByUserId String
+  channel         TeamInvitationChannel
+  targetHash      String
+  targetEncrypted String
+  targetLast4     String?
+  role            UserRole               @default(SCHOOL_ADMIN)
+  tokenHash       String                 @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  school          School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  invitedBy       User                   @relation("TeamInvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  @@index([schoolId, expiresAt, acceptedAt, revokedAt])
+  @@index([schoolId, targetHash, createdAt])
+}
+
+model SchoolPrivacySettings {
+  id                         String          @id @default(cuid())
+  schoolId                   String          @unique
+  auditRetentionDays         Int             @default(2555)
+  disabledStaffRetentionDays Int             @default(2555)
+  piiRetentionMode           PiiRetentionMode @default(REVIEW_REQUIRED)
+  updatedByUserId            String?
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
+  school                     School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  updatedBy                  User?           @relation("PrivacySettingsUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+}
+
+model StaffMember {
+  id              String             @id @default(cuid())
+  schoolId        String
+  nationalIdHash  String
+  nationalIdLast4 String?
+  phoneEncrypted  String?
+  phoneLookupHash  String?
+  phoneLast4      String?
+  fullName        String
+  jobTitle        String?
+  specialization  String?
+  email           String?
+  employeeNumber  String?
+  source          StaffSource        @default(NOOR_IMPORT)
+  manualOverrideFields Json          @default("[]")
+  active          Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  school          School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  participants    WorkshopParticipant[]
+  evaluations     TeacherWorkshopEvaluation[]
+  otpChallenges   OTPChallenge[]
+  teacherSessions TeacherSession[]
+  @@unique([schoolId, nationalIdHash])
+  @@index([schoolId, active])
+  @@index([schoolId, phoneLookupHash])
+  @@index([phoneLookupHash])
+}
+
+model StaffImportBatch {
+  id          String   @id @default(cuid())
+  schoolId    String
+  fileName    String
+  source      StaffSource @default(NOOR_IMPORT)
+  status      StaffImportStatus @default(PREVIEWED)
+  rowCount    Int      @default(0)
+  successCount Int     @default(0)
+  errorCount  Int      @default(0)
+  duplicateCount Int    @default(0)
+  invalidCount Int      @default(0)
+  missingCount Int      @default(0)
+  reviewCount Int        @default(0)
+  diff        Json?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@index([schoolId, createdAt])
+  @@index([schoolId, status, createdAt])
+}
+
+model Workshop {
+  id            String           @id @default(cuid())
+  schoolId      String
+  title         String
+  description   String?
+  facilitator   String?
+  location      String?
+  providerOrganization String?
+  workshopType  String?
+  category      String?
+  deliveryMode  WorkshopDeliveryMode @default(IN_PERSON)
+  locationOrUrl String?
+  objectives    String?
+  notes         String?
+  templateId    String?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  status        WorkshopStatus   @default(DRAFT)
+  approvedAt    DateTime?
+  completedAt   DateTime?
+  finalizedAt   DateTime?
+  postAssessmentSubmittedAt DateTime?
+  cancelledAt   DateTime?
+  deletedAt     DateTime?
+  draftStep     Int              @default(0)
+  cancellationReason String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  school        School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  participants  WorkshopParticipant[]
+  criteria      WorkshopCriterion[]
+  assessments   ManagerAssessment[]
+  evaluations   TeacherWorkshopEvaluation[]
+  report        ReportSnapshot?
+  template       WorkshopTemplate? @relation("WorkshopFromTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  followUps     FollowUpMeasurement[]
+  @@index([schoolId, status, startsAt])
+  @@index([schoolId, status, endsAt])
+  @@index([schoolId, deletedAt, updatedAt])
+}
+
+model WorkshopParticipant {
+  id         String      @id @default(cuid())
+  workshopId String
+  staffId    String
+  joinedAt   DateTime    @default(now())
+  workshop   Workshop    @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  staff      StaffMember @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  assessments ManagerAssessment[]
+  followUpAssessments FollowUpAssessment[]
+  @@unique([workshopId, staffId])
+  @@index([staffId, joinedAt])
+}
+
+model WorkshopCriterion {
+  id          String   @id @default(cuid())
+  workshopId  String
+  name        String
+  description String?
+  category    String?
+  guidance    String?
+  managerPrompt String?
+  participantPrompt String?
+  weight      Float
+  targetValue Float?
+  displayOrder Int
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  assessments ManagerAssessment[]
+  teacherResponses TeacherCriterionEvaluation[]
+  followUpAssessments FollowUpAssessment[]
+  @@unique([workshopId, displayOrder])
+}
+
+model ManagerAssessment {
+  id            String          @id @default(cuid())
+  workshopId    String
+  participantId String
+  criterionId   String
+  phase         AssessmentPhase
+  score         Int
+  notes         String?
+  status        AssessmentStatus @default(DRAFT)
+  submittedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  workshop      Workshop        @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  participant   WorkshopParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  criterion     WorkshopCriterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  @@unique([participantId, criterionId, phase])
+  @@index([workshopId, phase, status])
+  @@index([participantId, phase, status])
+  @@index([criterionId, phase, status])
+}
+
+model TeacherWorkshopEvaluation {
+  id              String           @id @default(cuid())
+  workshopId      String
+  staffId         String
+  rating          Int?
+  contentQuality  Int?
+  needFit         Int?
+  deliveryQuality Int?
+  applicability   Int?
+  comment         String?
+  status          AssessmentStatus @default(DRAFT)
+  submittedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  workshop        Workshop         @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  staff           StaffMember      @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  criterionResponses TeacherCriterionEvaluation[]
+  @@unique([workshopId, staffId])
+  @@index([workshopId, status, submittedAt])
+}
+
+model TeacherCriterionEvaluation {
+  id           String                    @id @default(cuid())
+  evaluationId String
+  criterionId  String
+  rating       Int?
+  evaluation   TeacherWorkshopEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  criterion    WorkshopCriterion         @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  @@unique([evaluationId, criterionId])
+  @@index([criterionId, rating])
+}
+
+model OTPChallenge {
+  id          String      @id @default(cuid())
+  staffId     String
+  candidateStaffIds Json?
+  purpose     OtpPurpose
+  codeHash    String
+  expiresAt   DateTime
+  lastSentAt  DateTime?
+  attempts    Int         @default(0)
+  maxAttempts Int         @default(5)
+  consumedAt  DateTime?
+  verifiedAt  DateTime?
+  selectedSchoolId String?
+  createdAt   DateTime    @default(now())
+  staff       StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  @@index([staffId, purpose, expiresAt])
+  @@index([purpose, expiresAt, consumedAt])
+}
+
+model TeacherSession {
+  id        String      @id @default(cuid())
+  tokenHash String      @unique
+  staffId   String
+  schoolId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime    @default(now())
+  staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@index([staffId, schoolId, expiresAt, revokedAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  schoolId  String?
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([schoolId, createdAt])
+  @@index([schoolId, action, createdAt])
+  @@index([schoolId, entity, entityId, createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt, revokedAt])
+}
+
+model AuthChallenge {
+  id          String                 @id @default(cuid())
+  userId      String
+  purpose     AuthChallengePurpose
+  targetHash  String
+  codeHash    String?
+  tokenHash   String?
+  expiresAt   DateTime
+  attempts    Int                    @default(0)
+  maxAttempts Int                    @default(5)
+  consumedAt  DateTime?
+  createdAt   DateTime               @default(now())
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, purpose, expiresAt])
+  @@index([targetHash, purpose, expiresAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  schoolId  String
+  type      String   @default("GENERAL")
+  title     String
+  body      String
+  href      String?
+  entityId  String?
+  dedupeKey String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@unique([schoolId, dedupeKey])
+  @@index([schoolId, readAt, createdAt])
+  @@index([schoolId, type, createdAt])
+}
+
+model CriterionTemplate {
+  id           String   @id @default(cuid())
+  schoolId     String
+  templateName String   @default("قالب مخصص")
+  name         String
+  description  String?
+  category     String?
+  guidance     String?
+  defaultWeight Float?
+  createdAt    DateTime @default(now())
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@index([schoolId, templateName, createdAt])
+}
+
+model WorkshopTemplate {
+  id              String   @id @default(cuid())
+  schoolId        String
+  name            String
+  workshopType    String?
+  description     String?
+  objectives      String?
+  category        String?
+  deliveryMode    WorkshopDeliveryMode @default(IN_PERSON)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  criteria        WorkshopTemplateCriterion[]
+  sourceWorkshops Workshop[] @relation("WorkshopFromTemplate")
+  @@index([schoolId, updatedAt])
+}
+
+model WorkshopTemplateCriterion {
+  id           String   @id @default(cuid())
+  templateId   String
+  name         String
+  description  String?
+  category     String?
+  guidance     String?
+  weight       Float
+  targetValue  Float?
+  displayOrder Int
+  template     WorkshopTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  @@unique([templateId, displayOrder])
+}
+
+model FollowUpMeasurement {
+  id          String   @id @default(cuid())
+  schoolId    String
+  workshopId  String
+  offsetDays  Int
+  dueAt       DateTime
+  status      FollowUpMeasurementStatus @default(PLANNED)
+  openedAt    DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  assessments FollowUpAssessment[]
+  @@unique([workshopId, offsetDays])
+  @@index([schoolId, status, dueAt])
+}
+
+model FollowUpAssessment {
+  id                    String   @id @default(cuid())
+  followUpMeasurementId String
+  participantId         String
+  criterionId           String
+  score                 Int
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  followUpMeasurement   FollowUpMeasurement @relation(fields: [followUpMeasurementId], references: [id], onDelete: Cascade)
+  participant           WorkshopParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  criterion             WorkshopCriterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  @@unique([followUpMeasurementId, participantId, criterionId])
+  @@index([followUpMeasurementId, criterionId])
+}
+
+model ReportSnapshot {
+  id          String   @id @default(cuid())
+  schoolId    String
+  workshopId  String   @unique
+  generatedAt DateTime @default(now())
+  engineVersion String
+  immutable   Boolean  @default(true)
+  participantCount Int @default(0)
+  overallScaleImprovement Float?
+  impactScore Float?
+  teacherResponseRate Float?
+  snapshot    Json
+  metrics     Json
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Restrict)
+  @@index([schoolId, generatedAt])
+}
