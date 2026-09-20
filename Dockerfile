@@ -16,14 +16,14 @@ ENV NODE_ENV=production
 # Prisma reads its datasource while generating the client. This value is used
 # only during image creation; the runtime DATABASE_URL is always injected.
 ENV DATABASE_URL=file:./data/athar.db
-COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run db:generate
 RUN npm run build
 
 FROM base AS migrator
 ENV NODE_ENV=production
-COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 CMD ["npx", "prisma", "migrate", "deploy"]
