@@ -9,8 +9,7 @@ RUN apt-get update \
 
 FROM base AS dependencies
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,id=athar-npm-cache,target=/root/.npm \
-  npm ci --prefer-offline --no-audit --no-fund
+RUN npm ci --prefer-offline --no-audit --no-fund
 
 FROM base AS builder
 ENV NODE_ENV=production
