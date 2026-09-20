@@ -4,7 +4,7 @@ FROM node:24-bookworm-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates openssl python3 make g++ \
+  && apt-get install -y --no-install-recommends ca-certificates openssl libssl3 libssl-dev python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
 FROM base AS dependencies
@@ -16,7 +16,7 @@ ENV NODE_ENV=production
 # Prisma reads its datasource while generating the client. This value is used
 # only during image creation; the runtime DATABASE_URL is always injected.
 ENV DATABASE_URL=file:./data/athar.db
-COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY . .
 RUN npm run db:generate
 RUN npm run build
