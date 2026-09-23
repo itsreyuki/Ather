@@ -19,6 +19,9 @@ function pageHref(params: URLSearchParams, page: number) {
   next.set("page", String(page));
   return `/dashboard/staff?${next.toString()}`;
 }
+function reviewFlagCount(value: Prisma.JsonValue) {
+  return Array.isArray(value) ? value.length : 0;
+}
 
 export default async function StaffPage({ searchParams }: { searchParams?: Promise<Query> }) {
   const session = await requireDashboardContext({ permission: Permission.StaffRead });
@@ -27,12 +30,14 @@ export default async function StaffPage({ searchParams }: { searchParams?: Promi
   const state =
     first(query.state) === "inactive" ? "inactive" : first(query.state) === "active" ? "active" : "all";
   const phone = first(query.phone) === "missing" ? "missing" : "all";
+  const review = first(query.review) === "needed" ? "needed" : "all";
   const sort = first(query.sort) ?? "updated";
   const currentPage = Math.max(1, Number.parseInt(first(query.page) ?? "1", 10) || 1);
   const where: Prisma.StaffMemberWhereInput = {
     schoolId: session.membership!.schoolId,
     ...(state === "active" ? { active: true } : state === "inactive" ? { active: false } : {}),
     ...(phone === "missing" ? { phoneEncrypted: null } : {}),
+    ...(review === "needed" ? { importReviewRequired: true } : {}),
     ...(search
       ? {
           OR: [
@@ -59,40 +64,46 @@ export default async function StaffPage({ searchParams }: { searchParams?: Promi
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const skip = (safePage - 1) * pageSize;
-  const staff = sort === "lastParticipation"
-    ? await (async () => {
-        const pattern = `%${search}%`;
-        const ids = await db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+  const staff =
+    sort === "lastParticipation"
+      ? await (async () => {
+          const pattern = `%${search}%`;
+          const ids = await db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
           SELECT staff."id"
           FROM "StaffMember" AS staff
           LEFT JOIN "WorkshopParticipant" AS participant ON participant."staffId" = staff."id"
           WHERE staff."schoolId" = ${session.membership!.schoolId}
           ${state === "active" ? Prisma.sql`AND staff."active" = TRUE` : state === "inactive" ? Prisma.sql`AND staff."active" = FALSE` : Prisma.sql``}
           ${phone === "missing" ? Prisma.sql`AND staff."phoneEncrypted" IS NULL` : Prisma.sql``}
+          ${review === "needed" ? Prisma.sql`AND staff."importReviewRequired" = TRUE` : Prisma.sql``}
           ${search ? Prisma.sql`AND (staff."fullName" LIKE ${pattern} OR staff."jobTitle" LIKE ${pattern} OR staff."specialization" LIKE ${pattern} OR staff."nationalIdLast4" LIKE ${pattern} OR staff."phoneLast4" LIKE ${pattern})` : Prisma.sql``}
           GROUP BY staff."id"
           ORDER BY MAX(participant."joinedAt") DESC NULLS LAST, staff."updatedAt" DESC
           OFFSET ${skip} LIMIT ${pageSize}
         `);
-        if (!ids.length) return db.staffMember.findMany({ where: { id: { in: [] } }, include });
-        const records = await db.staffMember.findMany({ where: { schoolId: session.membership!.schoolId, id: { in: ids.map((item) => item.id) } }, include });
-        const byId = new Map(records.map((item) => [item.id, item]));
-        return ids.flatMap((item) => {
-          const record = byId.get(item.id);
-          return record ? [record] : [];
+          if (!ids.length) return db.staffMember.findMany({ where: { id: { in: [] } }, include });
+          const records = await db.staffMember.findMany({
+            where: { schoolId: session.membership!.schoolId, id: { in: ids.map((item) => item.id) } },
+            include,
+          });
+          const byId = new Map(records.map((item) => [item.id, item]));
+          return ids.flatMap((item) => {
+            const record = byId.get(item.id);
+            return record ? [record] : [];
+          });
+        })()
+      : await db.staffMember.findMany({
+          where,
+          orderBy,
+          skip,
+          take: pageSize,
+          include,
         });
-      })()
-    : await db.staffMember.findMany({
-        where,
-        orderBy,
-        skip,
-        take: pageSize,
-        include,
-      });
   const params = new URLSearchParams();
   if (search) params.set("q", search);
   if (state !== "all") params.set("state", state);
   if (phone !== "all") params.set("phone", phone);
+  if (review !== "all") params.set("review", review);
   if (sort !== "updated") params.set("sort", sort);
 
   return (
@@ -123,6 +134,10 @@ export default async function StaffPage({ searchParams }: { searchParams?: Promi
         <select name="phone" defaultValue={phone} aria-label="حالة الجوال">
           <option value="all">كل الجوالات</option>
           <option value="missing">بدون جوال</option>
+        </select>
+        <select name="review" defaultValue={review} aria-label="حالة المطابقة">
+          <option value="all">كل المطابقة</option>
+          <option value="needed">تحتاج مطابقة</option>
         </select>
         <select name="sort" defaultValue={sort} aria-label="ترتيب النتائج">
           <option value="updated">آخر تحديث</option>
@@ -159,6 +174,7 @@ export default async function StaffPage({ searchParams }: { searchParams?: Promi
                 <th>الاسم</th>
                 <th>المسمى</th>
                 <th>التخصص</th>
+                <th>مصدر الاستيراد</th>
                 <th>حالة الجوال</th>
                 <th>الحالة</th>
                 <th>عدد الورش</th>
@@ -172,10 +188,24 @@ export default async function StaffPage({ searchParams }: { searchParams?: Promi
                     <Link className="table-link" href={`/dashboard/staff/${member.id}`}>
                       {member.fullName}
                     </Link>
-                    <small className="table-subtext">اسم مستخدم ينتهي بـ {member.nationalIdLast4 ?? "—"}</small>
+                    <small className="table-subtext">
+                      اسم مستخدم ينتهي بـ {member.nationalIdLast4 ?? "—"}
+                    </small>
                   </td>
                   <td data-label="المسمى">{member.jobTitle ?? "—"}</td>
-                  <td className="specialization-cell" data-label="التخصص">{member.specialization ?? "—"}</td>
+                  <td className="specialization-cell" data-label="التخصص">
+                    {member.specialization ?? "—"}
+                  </td>
+                  <td data-label="مصدر الاستيراد">
+                    <span className="table-source-label">
+                      {member.importSourceName ?? member.importSourceFileName ?? "استيراد نور"}
+                    </span>
+                    {reviewFlagCount(member.importReviewFlags) > 0 && (
+                      <StatusBadge tone="warning">
+                        {reviewFlagCount(member.importReviewFlags).toLocaleString("ar-SA")} للمراجعة
+                      </StatusBadge>
+                    )}
+                  </td>
                   <td data-label="حالة الجوال">
                     {member.phoneEncrypted ? (
                       <StatusBadge tone="success">•••• {member.phoneLast4}</StatusBadge>

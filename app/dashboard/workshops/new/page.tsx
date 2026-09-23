@@ -26,7 +26,15 @@ export default async function NewWorkshopPage({ searchParams }: { searchParams?:
     db.staffMember.findMany({
       where: { schoolId, active: true },
       orderBy: { fullName: "asc" },
-      select: { id: true, fullName: true, jobTitle: true, specialization: true },
+      select: {
+        id: true,
+        fullName: true,
+        jobTitle: true,
+        specialization: true,
+        importSourceName: true,
+        importSourceFileName: true,
+        importReviewRequired: true,
+      },
     }),
     id
       ? db.workshop.findFirst({
@@ -132,7 +140,11 @@ export default async function NewWorkshopPage({ searchParams }: { searchParams?:
         }
       />
       {!id && <WorkshopTemplateStart templates={templates} />}
-      {draft && <div className="draft-actions"><DeleteWorkshopAction workshopId={draft.id} /></div>}
+      {draft && (
+        <div className="draft-actions">
+          <DeleteWorkshopAction workshopId={draft.id} />
+        </div>
+      )}
       <WorkshopWizard staff={staff} initial={initial} />
     </>
   );

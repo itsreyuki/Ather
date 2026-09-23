@@ -3,7 +3,7 @@ import { criterionMetric, compositeImpact } from "../src/lib/metrics";
 import { hashPassword, normalizeEmail, normalizePhone, verifyPassword } from "../src/lib/security";
 import { registerSchema } from "../src/lib/auth-schemas";
 import ExcelJS from "exceljs";
-import { analyzeStaffWorkbook, parseNoorPdfRows } from "../src/lib/staff-import";
+import { analyzeStaffImportSources, analyzeStaffWorkbook, parseNoorPdfRows } from "../src/lib/staff-import";
 
 process.env.ID_LOOKUP_SECRET = Buffer.from("test-only-lookup-secret").toString("base64");
 
@@ -30,14 +30,31 @@ describe("impact metrics", () => {
   });
 
   it("requires exactly one contact method during registration", () => {
-    expect(registerSchema.safeParse({ email: "admin@school.sa", password: "password123", confirmPassword: "password123" }).success).toBe(true);
-    expect(registerSchema.safeParse({ email: "admin@school.sa", phone: "0501234567", password: "password123", confirmPassword: "password123" }).success).toBe(false);
+    expect(
+      registerSchema.safeParse({
+        email: "admin@school.sa",
+        password: "password123",
+        confirmPassword: "password123",
+      }).success,
+    ).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        email: "admin@school.sa",
+        phone: "0501234567",
+        password: "password123",
+        confirmPassword: "password123",
+      }).success,
+    ).toBe(false);
   });
 
   it("detects common Arabic Noor headers and flags duplicates/missing phones", async () => {
     const excel = new ExcelJS.Workbook();
     const sheet = excel.addWorksheet("البيانات");
-    sheet.addRows([["اسم الموظف", "الهوية الوطنية", "رقم الجوال", "المسمى الوظيفي"], ["سارة علي", "١٢٣٤٥٦٧٨٩٠", "٠٥٠١٢٣٤٥٦٧", "معلمة"], ["سارة علي", "١٢٣٤٥٦٧٨٩٠", "", "معلمة"]]);
+    sheet.addRows([
+      ["اسم الموظف", "الهوية الوطنية", "رقم الجوال", "المسمى الوظيفي"],
+      ["سارة علي", "١٢٣٤٥٦٧٨٩٠", "٠٥٠١٢٣٤٥٦٧", "معلمة"],
+      ["سارة علي", "١٢٣٤٥٦٧٨٩٠", "", "معلمة"],
+    ]);
     const workbook = await excel.xlsx.writeBuffer();
     const analysis = await analyzeStaffWorkbook({ bytes: workbook, fileName: "noor.xlsx" });
     expect(analysis.mapping.fullName).toBe("اسم الموظف");
@@ -51,7 +68,11 @@ describe("impact metrics", () => {
   it("flags a shared phone without importing it as a duplicate identity", async () => {
     const excel = new ExcelJS.Workbook();
     const sheet = excel.addWorksheet("data");
-    sheet.addRows([["name", "national id", "phone", "job title"], ["A", "1234567890", "0501234567", "Teacher"], ["B", "1234567891", "0501234567", "Teacher"]]);
+    sheet.addRows([
+      ["name", "national id", "phone", "job title"],
+      ["A", "1234567890", "0501234567", "Teacher"],
+      ["B", "1234567891", "0501234567", "Teacher"],
+    ]);
     const workbook = await excel.xlsx.writeBuffer();
     const analysis = await analyzeStaffWorkbook({ bytes: workbook, fileName: "phones.xlsx" });
     expect(analysis.validRows).toBe(2);
@@ -88,7 +109,10 @@ describe("impact metrics", () => {
       ["رقم الهوية", "الاسم الرباعي", "الجوال", "حالة التوظيف", "المسمى الوظيفي", "مجال التدريس", "التخصص"],
       ["1234567890", "أحمد محمد (مثال)", "0500000000", "دائم", "معلم", "الحاسب", "تقنية المعلومات"],
     ]);
-    const analysis = await analyzeStaffWorkbook({ bytes: await excel.xlsx.writeBuffer(), fileName: "noor-official.xlsx" });
+    const analysis = await analyzeStaffWorkbook({
+      bytes: await excel.xlsx.writeBuffer(),
+      fileName: "noor-official.xlsx",
+    });
     expect(analysis.noorTemplate.matches).toBe(true);
     expect(analysis.mapping.fullName).toBe("الاسم الرباعي");
     expect(analysis.mapping.nationalId).toBe("رقم الهوية");
@@ -100,7 +124,10 @@ describe("impact metrics", () => {
       ["اسم المستخدم", "الاسم الرباعي", "الجوال", "حالة التوظيف", "المسمى الوظيفي", "مجال التدريس", "التخصص"],
       ["teacher_ahmad.1", "أحمد تجريبي", "0500000000", "دائم", "معلم", "الحاسب", "تقنية المعلومات"],
     ]);
-    const analysis = await analyzeStaffWorkbook({ bytes: await excel.xlsx.writeBuffer(), fileName: "noor-username.xlsx" });
+    const analysis = await analyzeStaffWorkbook({
+      bytes: await excel.xlsx.writeBuffer(),
+      fileName: "noor-username.xlsx",
+    });
     expect(analysis.rows[0]?.errors).toEqual([]);
     expect(analysis.rows[0]?.nationalIdHash).toBeTruthy();
     expect(analysis.rows[0]?.nationalIdLast4).toBe("ad.1");
@@ -108,34 +135,52 @@ describe("impact metrics", () => {
 
   it("rejects a workbook that has no recognizable Noor structure", async () => {
     const excel = new ExcelJS.Workbook();
-    excel.addWorksheet("data").addRows([["الاسم", "رقم الهوية"], ["سجل تجريبي", "1234567890"]]);
-    const analysis = await analyzeStaffWorkbook({ bytes: await excel.xlsx.writeBuffer(), fileName: "manual-list.xlsx" });
+    excel.addWorksheet("data").addRows([
+      ["الاسم", "رقم الهوية"],
+      ["سجل تجريبي", "1234567890"],
+    ]);
+    const analysis = await analyzeStaffWorkbook({
+      bytes: await excel.xlsx.writeBuffer(),
+      fileName: "manual-list.xlsx",
+    });
     expect(analysis.noorTemplate.matches).toBe(false);
     expect(analysis.noorTemplate.issues.join(" ")).toContain("أعمدة نور");
   });
 
   it("extracts row order from the text layer of a Noor PDF", () => {
-    const rows = parseNoorPdfRows([
-      "اسم المستخدم الاسم الرباعي الجوال حالة التوظيف المسمى الوظيفي مجال التدريس التخصص",
-      "1234567890",
-      "تجريبي معلم",
-      "966500000000",
-      "دائم معلم رياضيات رياضيات",
-      "1234567891",
-      "تجريبية معلمة",
-      "966511111111",
-      "دائم معلمة علوم علوم",
-    ].join("\n"));
+    const rows = parseNoorPdfRows(
+      [
+        "اسم المستخدم الاسم الرباعي الجوال حالة التوظيف المسمى الوظيفي مجال التدريس التخصص",
+        "1234567890",
+        "تجريبي معلم",
+        "966500000000",
+        "دائم معلم رياضيات رياضيات",
+        "1234567891",
+        "تجريبية معلمة",
+        "966511111111",
+        "دائم معلمة علوم علوم",
+      ].join("\n"),
+    );
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toEqual(["1234567890", "معلم تجريبي", "966500000000", "دائم", "معلم", "رياضيات", "رياضيات"]);
+    expect(rows[0]).toEqual([
+      "1234567890",
+      "معلم تجريبي",
+      "966500000000",
+      "دائم",
+      "معلم",
+      "رياضيات",
+      "رياضيات",
+    ]);
   });
 
   it("handles Noor PDF rows whose columns are extracted on one line", () => {
-    const rows = parseNoorPdfRows([
-      "اسم المستخدمالاسم الرباعيالجوال حالة التوظيف المسمى الوظيفي مجال التدريسالتخصص",
-      "1057704957آمال سعود عبد الله الغامدي966535801122 معلمالحاسب الآليحاسب",
-      "Emaan0711ايمان احمد عطية الغامدي966500503230دائممعلمأحياءأحياء",
-    ].join("\n"));
+    const rows = parseNoorPdfRows(
+      [
+        "اسم المستخدمالاسم الرباعيالجوال حالة التوظيف المسمى الوظيفي مجال التدريسالتخصص",
+        "1057704957آمال سعود عبد الله الغامدي966535801122 معلمالحاسب الآليحاسب",
+        "Emaan0711ايمان احمد عطية الغامدي966500503230دائممعلمأحياءأحياء",
+      ].join("\n"),
+    );
     expect(rows).toHaveLength(2);
     expect(rows[0]?.[0]).toBe("1057704957");
     expect(rows[0]?.[1]).toContain("آمال سعود");
@@ -144,20 +189,22 @@ describe("impact metrics", () => {
   });
 
   it("separates specialization from the concatenated Noor PDF columns", () => {
-    const rows = parseNoorPdfRows([
-      "1057704957",
-      "آمال سعود عبدالله الغامدي",
-      "966535801122",
-      "دائممعلما;لي الحاسبحاسب",
-      "1012839435",
-      "باسمه بنت علي بن محمد الغامدي",
-      "966555433080",
-      "دائممعلماIنجليزية اللغةإنجليزي",
-      "1036962551",
-      "حنان محمد علي الغامدي",
-      "966552361310",
-      "دائممعلمرياضياترياضيات",
-    ].join("\n"));
+    const rows = parseNoorPdfRows(
+      [
+        "1057704957",
+        "آمال سعود عبدالله الغامدي",
+        "966535801122",
+        "دائممعلما;لي الحاسبحاسب",
+        "1012839435",
+        "باسمه بنت علي بن محمد الغامدي",
+        "966555433080",
+        "دائممعلماIنجليزية اللغةإنجليزي",
+        "1036962551",
+        "حنان محمد علي الغامدي",
+        "966552361310",
+        "دائممعلمرياضياترياضيات",
+      ].join("\n"),
+    );
     expect(rows.map((row) => row.slice(3))).toEqual([
       ["دائم", "معلم", "الحاسب", "حاسب"],
       ["دائم", "معلم", "اللغة الإنجليزية", "إنجليزي"],
@@ -166,8 +213,90 @@ describe("impact metrics", () => {
   });
 
   it("rejects corrupted and zero-record workbooks before import", async () => {
-    await expect(analyzeStaffWorkbook({ bytes: Buffer.from("not-an-xlsx"), fileName: "corrupt.xlsx" })).rejects.toThrow();
+    await expect(
+      analyzeStaffWorkbook({ bytes: Buffer.from("not-an-xlsx"), fileName: "corrupt.xlsx" }),
+    ).rejects.toThrow();
     const empty = new ExcelJS.Workbook();
-    await expect(analyzeStaffWorkbook({ bytes: await empty.xlsx.writeBuffer(), fileName: "empty.xlsx" })).rejects.toThrow();
+    await expect(
+      analyzeStaffWorkbook({ bytes: await empty.xlsx.writeBuffer(), fileName: "empty.xlsx" }),
+    ).rejects.toThrow();
+  });
+
+  it("combines multiple Noor sources and flags cross-source identity conflicts", async () => {
+    async function makeFile(records: string[][]) {
+      const workbook = new ExcelJS.Workbook();
+      workbook
+        .addWorksheet("staff")
+        .addRows([
+          ["username", "full name", "phone", "employment status", "job title", "specialization"],
+          ...records,
+        ]);
+      return workbook.xlsx.writeBuffer();
+    }
+
+    const result = await analyzeStaffImportSources({
+      sources: [
+        {
+          fileName: "teachers-a.xlsx",
+          sourceName: "Source A",
+          bytes: await makeFile([
+            ["teacher001", "Test Person A", "0501111111", "Permanent", "Teacher", "Math"],
+          ]),
+        },
+        {
+          fileName: "teachers-b.xlsx",
+          sourceName: "Source B",
+          bytes: await makeFile([
+            ["teacher001", "Duplicate Person", "0502222222", "Permanent", "Teacher", "Science"],
+            ["teacher002", "Test Person B", "0501111111", "Permanent", "Teacher", "Arabic"],
+          ]),
+        },
+      ],
+    });
+
+    expect(result.rows).toHaveLength(3);
+    expect(result.invalidRows).toBe(1);
+    expect(result.validRows).toBe(2);
+    expect(result.duplicateRows).toBe(1);
+    expect(result.duplicatePhoneRows).toBe(1);
+    expect(result.sourceSummaries.map((source) => source.name)).toEqual(["Source A", "Source B"]);
+    expect(result.sourceSummaries.map((source) => source.extractedCount)).toEqual([1, 2]);
+    expect(result.rows[1]?.errors.join(" ")).toContain("\u0645\u0635\u062f\u0631");
+  });
+
+  it("flags near matches across multiple sources without blocking valid records", async () => {
+    async function makeFile(records: string[][]) {
+      const workbook = new ExcelJS.Workbook();
+      workbook
+        .addWorksheet("staff")
+        .addRows([
+          ["username", "full name", "phone", "employment status", "job title", "specialization"],
+          ...records,
+        ]);
+      return workbook.xlsx.writeBuffer();
+    }
+    const result = await analyzeStaffImportSources({
+      sources: [
+        {
+          fileName: "a.xlsx",
+          sourceName: "مصدر أ",
+          bytes: await makeFile([
+            ["teacher001", "Ahmed Mohamed", "0501111111", "Permanent", "Teacher", "Math"],
+          ]),
+        },
+        {
+          fileName: "b.xlsx",
+          sourceName: "مصدر ب",
+          bytes: await makeFile([
+            ["teacher002", "Ahmed Mohammed", "0501111112", "Permanent", "Teacher", "Math"],
+          ]),
+        },
+      ],
+    });
+    expect(result.invalidRows).toBe(0);
+    expect(result.validRows).toBe(2);
+    expect(result.rows.every((row) => row.reviewFlags.length >= 3)).toBe(true);
+    expect(result.rows[0]?.warnings.join(" ")).toContain("متشابه");
+    expect(result.sourceSummaries.every((source) => source.reviewCount === 1)).toBe(true);
   });
 });

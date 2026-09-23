@@ -222,6 +222,10 @@ model StaffMember {
   email           String?
   employeeNumber  String?
   source          StaffSource        @default(NOOR_IMPORT)
+  importSourceName String?
+  importSourceFileName String?
+  importReviewFlags Json              @default("[]")
+  importReviewRequired Boolean         @default(false)
   manualOverrideFields Json          @default("[]")
   active          Boolean            @default(true)
   createdAt       DateTime           @default(now())
@@ -234,6 +238,7 @@ model StaffMember {
   @@unique([schoolId, nationalIdHash])
   @@index([schoolId, active])
   @@index([schoolId, phoneLookupHash])
+  @@index([schoolId, active, importReviewRequired])
   @@index([phoneLookupHash])
 }
 

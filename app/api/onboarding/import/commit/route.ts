@@ -4,7 +4,13 @@ import { assertApiPermission } from "@/src/lib/dashboard-access";
 import { db } from "@/src/lib/db";
 import { encryptField, phoneLookupHash } from "@/src/lib/security";
 import { staffOverrideFields } from "@/src/lib/staff-overrides";
-import { analyzeStaffWorkbook, readStaffImportFile, type StaffCorrections, type StaffMapping } from "@/src/lib/staff-import";
+import {
+  analyzeStaffImportSources,
+  analyzeStaffWorkbook,
+  type StaffCorrections,
+  type StaffMapping,
+} from "@/src/lib/staff-import";
+import { readStaffImportUpload } from "@/src/lib/staff-import-upload";
 import { createInAppNotification, notificationTypes } from "@/src/lib/notification-service";
 import { Permission } from "@/src/lib/permissions";
 
@@ -13,7 +19,8 @@ export const runtime = "nodejs";
 function parseCorrections(value: FormDataEntryValue | null): StaffCorrections | undefined {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const parsed: unknown = JSON.parse(value);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("تصحيحات الملف غير صالحة");
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new Error("تصحيحات الملف غير صالحة");
   return parsed as StaffCorrections;
 }
 
@@ -43,13 +50,11 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     const form = await request.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) return NextResponse.json({ error: "لم يتم اختيار ملف" }, { status: 400 });
     const mapping = form.get("mapping")
       ? (JSON.parse(String(form.get("mapping"))) as StaffMapping)
       : undefined;
     const corrections = parseCorrections(form.get("corrections"));
-    const stored = await readStaffImportFile(file);
+    const upload = await readStaffImportUpload(form);
     const existing = await db.staffMember.findMany({
       where: { schoolId: session.membership.schoolId },
       select: {
@@ -62,15 +67,27 @@ export async function POST(request: Request) {
         manualOverrideFields: true,
       },
     });
-    const analysis = await analyzeStaffWorkbook({
-      ...stored,
-      mapping,
-      corrections,
-      existingIdHashes: new Set(existing.map((item) => item.nationalIdHash)),
-      existingPhoneHashes: new Set(
-        existing.flatMap((item) => (item.phoneLookupHash ? [item.phoneLookupHash] : [])),
-      ),
-    });
+    const existingIdHashes = new Set(existing.map((item) => item.nationalIdHash));
+    const existingPhoneHashes = new Set(
+      existing.flatMap((item) => (item.phoneLookupHash ? [item.phoneLookupHash] : [])),
+    );
+    const analysis =
+      upload.mode === "single"
+        ? await analyzeStaffWorkbook({
+            ...upload.source,
+            mapping,
+            corrections,
+            existingIdHashes,
+            existingPhoneHashes,
+          })
+        : await analyzeStaffImportSources({
+            sources: upload.sources,
+            mapping,
+            corrections,
+            existingIdHashes,
+            existingPhoneHashes,
+          });
+    const sourceSummaries = "sourceSummaries" in analysis ? analysis.sourceSummaries : undefined;
     if (!analysis.noorTemplate.matches)
       return NextResponse.json(
         {
@@ -84,10 +101,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "يلزم تأكيد مطابقة الأعمدة قبل الاعتماد" }, { status: 422 });
     const validRows = analysis.rows.filter((row) => row.errors.length === 0 && row.nationalIdHash);
     if (analysis.invalidRows > 0)
-      return NextResponse.json({ error: "توجد سجلات غير سليمة. صحح أسباب الخلل في المعاينة ثم أعد التحليل قبل الحفظ." }, { status: 422 });
+      return NextResponse.json(
+        { error: "توجد سجلات غير سليمة. صحح أسباب الخلل في المعاينة ثم أعد التحليل قبل الحفظ." },
+        { status: 422 },
+      );
     if (!validRows.length)
       return NextResponse.json({ error: "لا توجد سجلات سليمة قابلة للاستيراد" }, { status: 422 });
     const incomingHashes = new Set(validRows.map((row) => row.nationalIdHash));
+    const sourceForRow = (row: (typeof validRows)[number]) =>
+      upload.mode === "multiple"
+        ? {
+            name: row.sourceName ?? "مصدر غير معروف",
+            fileName: upload.sources[row.sourceIndex ?? 0]?.fileName ?? upload.fileName,
+          }
+        : { name: upload.source.fileName, fileName: upload.source.fileName };
     const missingStaff = existing.filter(
       (staff) => staff.active && !incomingHashes.has(staff.nationalIdHash),
     );
@@ -95,15 +122,26 @@ export async function POST(request: Request) {
     const diff = {
       created: validRows
         .filter((row) => !row.duplicateInSchool)
-        .map((row) => ({ fullName: row.fullName, rowNumber: row.rowNumber })),
+        .map((row) => ({
+          fullName: row.fullName,
+          rowNumber: row.rowNumber,
+          sourceName: sourceForRow(row).name,
+          reviewFlags: row.reviewFlags,
+        })),
       updated: validRows
         .filter((row) => row.duplicateInSchool)
-        .map((row) => ({ fullName: row.fullName, rowNumber: row.rowNumber })),
+        .map((row) => ({
+          fullName: row.fullName,
+          rowNumber: row.rowNumber,
+          sourceName: sourceForRow(row).name,
+          reviewFlags: row.reviewFlags,
+        })),
       conflicts: analysis.rows
         .filter((row) => row.errors.length > 0)
         .map((row) => ({
           fullName: row.fullName || "بدون اسم",
           rowNumber: row.rowNumber,
+          sourceName: sourceForRow(row).name,
           issues: row.errors,
         })),
       missing: missingStaff.map((staff) => ({
@@ -155,6 +193,10 @@ export async function POST(request: Request) {
             email: row.email ?? undefined,
             employeeNumber: row.employeeNumber ?? undefined,
             source: "NOOR_IMPORT",
+            importSourceName: sourceForRow(row).name,
+            importSourceFileName: sourceForRow(row).fileName,
+            importReviewFlags: row.reviewFlags,
+            importReviewRequired: row.reviewFlags.length > 0,
             active: true,
           })),
         });
@@ -180,7 +222,13 @@ export async function POST(request: Request) {
                 phoneLast4: row.phoneLast4,
               }
             : {}),
-          manualOverrideFields: staffOverrideFields(current.manualOverrideFields).filter((field) => !importedFields.includes(field)),
+          importSourceName: sourceForRow(row).name,
+          importSourceFileName: sourceForRow(row).fileName,
+          importReviewFlags: row.reviewFlags,
+          importReviewRequired: row.reviewFlags.length > 0,
+          manualOverrideFields: staffOverrideFields(current.manualOverrideFields).filter(
+            (field) => !importedFields.includes(field),
+          ),
         };
         await tx.staffMember.update({ where: { id: current.id }, data: updateData });
         updated += 1;
@@ -188,7 +236,7 @@ export async function POST(request: Request) {
       const batch = await tx.staffImportBatch.create({
         data: {
           schoolId: session.membership!.schoolId,
-          fileName: stored.fileName,
+          fileName: upload.fileName,
           source: "NOOR_IMPORT",
           status: "COMMITTED",
           rowCount: analysis.totalRows,
@@ -198,7 +246,13 @@ export async function POST(request: Request) {
           invalidCount: analysis.invalidRows,
           missingCount: missingFromLatest.length,
           reviewCount: analysis.reviewRows + missingFromLatest.length,
-          diff: { ...diff, missingStaffIds: missingFromLatest, createdCount: created, updatedCount: updated },
+          diff: {
+            ...diff,
+            missingStaffIds: missingFromLatest,
+            createdCount: created,
+            updatedCount: updated,
+            ...(sourceSummaries ? { sources: sourceSummaries } : {}),
+          },
           completedAt: new Date(),
         },
       });
@@ -220,6 +274,7 @@ export async function POST(request: Request) {
             updated,
             missingFromLatest: missingFromLatest.length,
             reviewRows: analysis.reviewRows,
+            similarityReviewRows: validRows.filter((row) => row.reviewFlags.length > 0).length,
             reimport: existing.length > 0,
           },
         },
@@ -258,7 +313,9 @@ export async function POST(request: Request) {
         conflicts: diff.conflicts,
         createdRows: diff.created,
         updatedRows: diff.updated,
+        ...(sourceSummaries ? { sources: sourceSummaries } : {}),
         needsPhone: validRows.filter((row) => !row.phone).length,
+        similarityReviewCount: validRows.filter((row) => row.reviewFlags.length > 0).length,
         needsReview: analysis.invalidRows + analysis.reviewRows + result.missingFromLatest,
         nextPath: "/dashboard",
       },

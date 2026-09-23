@@ -4,20 +4,27 @@ import { assertApiPermission } from "@/src/lib/dashboard-access";
 import { db } from "@/src/lib/db";
 import { Permission } from "@/src/lib/permissions";
 import {
+  analyzeStaffImportSources,
   analyzeStaffWorkbook,
-  readStaffImportFile,
   STAFF_IMPORT_MAX_PREVIEW_ROWS,
   type StaffCorrections,
   type StaffMapping,
 } from "@/src/lib/staff-import";
+import { readStaffImportUpload } from "@/src/lib/staff-import-upload";
 
 export const runtime = "nodejs";
 
 function preview(analysis: Awaited<ReturnType<typeof analyzeStaffWorkbook>>) {
   const validRows = analysis.rows.filter((row) => row.errors.length === 0 && row.nationalIdHash);
   const firstRows = analysis.rows.slice(0, STAFF_IMPORT_MAX_PREVIEW_ROWS);
-  const issueRows = analysis.rows.filter((row) => row.errors.length > 0 || row.warnings.length > 0).slice(0, 200);
-  const rows = [...new Map([...firstRows, ...issueRows].map((row) => [row.rowNumber, row])).values()];
+  const issueRows = analysis.rows
+    .filter((row) => row.errors.length > 0 || row.warnings.length > 0)
+    .slice(0, 200);
+  const rows = [
+    ...new Map(
+      [...firstRows, ...issueRows].map((row) => [`${row.sourceIndex ?? 0}:${row.rowNumber}`, row]),
+    ).values(),
+  ];
   return {
     ...analysis,
     diff: {
@@ -27,6 +34,8 @@ function preview(analysis: Awaited<ReturnType<typeof analyzeStaffWorkbook>>) {
     },
     rows: rows.map((row) => ({
       rowNumber: row.rowNumber,
+      sourceIndex: row.sourceIndex,
+      sourceName: row.sourceName,
       fullName: row.fullName,
       nationalIdLast4: row.nationalIdLast4,
       phoneLast4: row.phoneLast4,
@@ -35,20 +44,23 @@ function preview(analysis: Awaited<ReturnType<typeof analyzeStaffWorkbook>>) {
       email: row.email,
       errors: row.errors,
       warnings: row.warnings,
+      reviewFlags: row.reviewFlags,
       duplicateWithinFile: row.duplicateWithinFile,
       duplicateInSchool: row.duplicateInSchool,
       duplicatePhoneWithinFile: row.duplicatePhoneWithinFile,
       duplicatePhoneInSchool: row.duplicatePhoneInSchool,
       issues: [...row.errors, ...row.warnings],
     })),
-    issueRowsTruncated: analysis.rows.filter((row) => row.errors.length > 0 || row.warnings.length > 0).length > 200,
+    issueRowsTruncated:
+      analysis.rows.filter((row) => row.errors.length > 0 || row.warnings.length > 0).length > 200,
   };
 }
 
 function parseCorrections(value: FormDataEntryValue | null): StaffCorrections | undefined {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const parsed: unknown = JSON.parse(value);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("تصحيحات الملف غير صالحة");
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new Error("تصحيحات الملف غير صالحة");
   return parsed as StaffCorrections;
 }
 
@@ -60,27 +72,36 @@ export async function POST(request: Request) {
   if (denied) return denied;
   try {
     const form = await request.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) return NextResponse.json({ error: "لم يتم اختيار ملف" }, { status: 400 });
     const mapping = form.get("mapping")
       ? (JSON.parse(String(form.get("mapping"))) as StaffMapping)
       : undefined;
     const corrections = parseCorrections(form.get("corrections"));
-    const stored = await readStaffImportFile(file);
+    const upload = await readStaffImportUpload(form);
     const existing = await db.staffMember.findMany({
       where: { schoolId: session.membership.schoolId },
       select: { nationalIdHash: true, phoneLookupHash: true },
     });
-    const analysis = await analyzeStaffWorkbook({
-      ...stored,
-      mapping,
-      corrections,
-      existingIdHashes: new Set(existing.map((item) => item.nationalIdHash)),
-      existingPhoneHashes: new Set(
-        existing.flatMap((item) => (item.phoneLookupHash ? [item.phoneLookupHash] : [])),
-      ),
-    });
-    return NextResponse.json({ fileName: stored.fileName, ...preview(analysis) });
+    const existingIdHashes = new Set(existing.map((item) => item.nationalIdHash));
+    const existingPhoneHashes = new Set(
+      existing.flatMap((item) => (item.phoneLookupHash ? [item.phoneLookupHash] : [])),
+    );
+    const analysis =
+      upload.mode === "single"
+        ? await analyzeStaffWorkbook({
+            ...upload.source,
+            mapping,
+            corrections,
+            existingIdHashes,
+            existingPhoneHashes,
+          })
+        : await analyzeStaffImportSources({
+            sources: upload.sources,
+            mapping,
+            corrections,
+            existingIdHashes,
+            existingPhoneHashes,
+          });
+    return NextResponse.json({ fileName: upload.fileName, ...preview(analysis) });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "تعذر تحليل الملف" },
