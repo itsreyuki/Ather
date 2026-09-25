@@ -5,6 +5,7 @@ import { assertApiPermission } from "@/src/lib/dashboard-access";
 import { db } from "@/src/lib/db";
 import { Permission } from "@/src/lib/permissions";
 import { parseWorkshopDate } from "@/src/lib/workshop-schedule";
+import { ProgramType } from "@prisma/client";
 
 const deliveryModes = ["IN_PERSON", "REMOTE", "HYBRID"] as const;
 const draftSchema = z
@@ -12,8 +13,10 @@ const draftSchema = z
     title: z.string().trim().max(200).optional(),
     description: z.string().trim().max(2000).optional(),
     facilitator: z.string().trim().max(200).optional(),
+    facilitatorStaffId: z.string().min(1).optional(),
     providerOrganization: z.string().trim().max(200).optional(),
     workshopType: z.string().trim().max(120).optional(),
+    programType: z.nativeEnum(ProgramType).optional(),
     category: z.string().trim().max(120).optional(),
     deliveryMode: z.enum(deliveryModes).optional(),
     locationOrUrl: z.string().trim().max(500).optional(),
@@ -44,15 +47,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "صيغة التاريخ غير صالحة" }, { status: 400 });
   if (startsAt && endsAt && endsAt <= startsAt)
     return NextResponse.json({ error: "تاريخ النهاية يجب أن يكون بعد البداية" }, { status: 400 });
+  const facilitator = data.facilitatorStaffId
+    ? await db.staffMember.findFirst({
+        where: { id: data.facilitatorStaffId, schoolId: session.membership!.schoolId, active: true },
+        select: { id: true, fullName: true },
+      })
+    : null;
+  if (data.facilitatorStaffId && !facilitator)
+    return NextResponse.json({ error: "اختر منفذًا نشطًا من منسوبي المدرسة." }, { status: 422 });
   const workshop = await db.$transaction(async (tx) => {
     const created = await tx.workshop.create({
       data: {
         schoolId: session.membership!.schoolId,
         title: data.title || "مسودة ورشة",
         description: data.description || null,
-        facilitator: data.facilitator || null,
+        facilitator: (facilitator?.fullName ?? data.facilitator) || null,
+        facilitatorStaffId: facilitator?.id ?? null,
         providerOrganization: data.providerOrganization || null,
         workshopType: data.workshopType || null,
+        programType: data.programType,
         category: data.category || null,
         deliveryMode: data.deliveryMode ?? "IN_PERSON",
         locationOrUrl: data.locationOrUrl || null,

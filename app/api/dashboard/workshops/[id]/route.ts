@@ -5,14 +5,17 @@ import { assertApiPermission } from "@/src/lib/dashboard-access";
 import { db } from "@/src/lib/db";
 import { Permission } from "@/src/lib/permissions";
 import { parseWorkshopDate } from "@/src/lib/workshop-schedule";
+import { ProgramType } from "@prisma/client";
 
 const schema = z
   .object({
     title: z.string().trim().max(200).optional(),
     description: z.string().trim().max(2000).optional(),
     facilitator: z.string().trim().max(200).optional(),
+    facilitatorStaffId: z.string().min(1).nullable().optional(),
     providerOrganization: z.string().trim().max(200).optional(),
     workshopType: z.string().trim().max(120).optional(),
+    programType: z.nativeEnum(ProgramType).nullable().optional(),
     category: z.string().trim().max(120).optional(),
     deliveryMode: z.enum(["IN_PERSON", "REMOTE", "HYBRID"]).optional(),
     locationOrUrl: z.string().trim().max(500).optional(),
@@ -49,16 +52,28 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "صيغة التاريخ غير صالحة" }, { status: 400 });
   if (startsAt && endsAt && endsAt <= startsAt)
     return NextResponse.json({ error: "تاريخ النهاية يجب أن يكون بعد البداية" }, { status: 400 });
+  const facilitator = data.facilitatorStaffId
+    ? await db.staffMember.findFirst({
+        where: { id: data.facilitatorStaffId, schoolId: session.membership.schoolId, active: true },
+        select: { id: true, fullName: true },
+      })
+    : null;
+  if (data.facilitatorStaffId && !facilitator)
+    return NextResponse.json({ error: "اختر منفذًا نشطًا من منسوبي المدرسة." }, { status: 422 });
   await db.workshop.update({
     where: { id },
     data: {
       ...(data.title !== undefined ? { title: data.title || "مسودة ورشة" } : {}),
       ...(data.description !== undefined ? { description: data.description || null } : {}),
-      ...(data.facilitator !== undefined ? { facilitator: data.facilitator || null } : {}),
+      ...(data.facilitator !== undefined || data.facilitatorStaffId !== undefined
+        ? { facilitator: (facilitator?.fullName ?? data.facilitator) || null }
+        : {}),
+      ...(data.facilitatorStaffId !== undefined ? { facilitatorStaffId: facilitator?.id ?? null } : {}),
       ...(data.providerOrganization !== undefined
         ? { providerOrganization: data.providerOrganization || null }
         : {}),
       ...(data.workshopType !== undefined ? { workshopType: data.workshopType || null } : {}),
+      ...(data.programType !== undefined ? { programType: data.programType } : {}),
       ...(data.category !== undefined ? { category: data.category || null } : {}),
       ...(data.deliveryMode !== undefined ? { deliveryMode: data.deliveryMode } : {}),
       ...(data.locationOrUrl !== undefined ? { locationOrUrl: data.locationOrUrl || null } : {}),

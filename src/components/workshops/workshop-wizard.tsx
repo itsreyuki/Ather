@@ -30,8 +30,10 @@ type Info = {
   title: string;
   description: string;
   facilitator: string;
+  facilitatorStaffId: string;
   providerOrganization: string;
   workshopType: string;
+  programType: string;
   category: string;
   deliveryMode: "IN_PERSON" | "REMOTE" | "HYBRID";
   locationOrUrl: string;
@@ -63,8 +65,10 @@ const emptyInfo: Info = {
   title: "",
   description: "",
   facilitator: "",
+  facilitatorStaffId: "",
   providerOrganization: "",
   workshopType: "",
+  programType: "",
   category: "",
   deliveryMode: "IN_PERSON",
   locationOrUrl: "",
@@ -151,6 +155,8 @@ export function WorkshopWizard({ staff, initial }: { staff: Staff[]; initial?: I
     setError("");
     if (step === 0) {
       if (!info.title.trim()) return setError("اسم الورشة مطلوب");
+      if (!info.programType) return setError("اختر نوع البرنامج");
+      if (!info.facilitatorStaffId) return setError("اختر منفذ الورشة");
       if (!info.startsAt || !info.endsAt) return setError("تاريخ ووقت البداية والنهاية مطلوبان");
       if (new Date(info.endsAt) <= new Date(info.startsAt))
         return setError("تاريخ النهاية يجب أن يكون بعد البداية");
@@ -329,7 +335,7 @@ export function WorkshopWizard({ staff, initial }: { staff: Staff[]; initial?: I
           </li>
         ))}
       </ol>
-      {step === 0 && <InfoStep info={info} updateInfo={updateInfo} />}
+      {step === 0 && <InfoStep info={info} staff={staff} updateInfo={updateInfo} />}
       {step === 1 && (
         <ParticipantsStep staff={staff} selectedIds={selectedIds} setSelectedIds={setSelectedIds} />
       )}
@@ -384,7 +390,15 @@ export function WorkshopWizard({ staff, initial }: { staff: Staff[]; initial?: I
   );
 }
 
-function InfoStep({ info, updateInfo }: { info: Info; updateInfo: (patch: Partial<Info>) => void }) {
+function InfoStep({
+  info,
+  staff,
+  updateInfo,
+}: {
+  info: Info;
+  staff: Staff[];
+  updateInfo: (patch: Partial<Info>) => void;
+}) {
   const duration =
     info.startsAt && info.endsAt && new Date(info.endsAt) > new Date(info.startsAt)
       ? Math.round((new Date(info.endsAt).getTime() - new Date(info.startsAt).getTime()) / 60000)
@@ -402,17 +416,44 @@ function InfoStep({ info, updateInfo }: { info: Info; updateInfo: (patch: Partia
           onChange={(value) => updateInfo({ title: value })}
           required
         />
-        <Field
-          label="نوع الورشة"
-          value={info.workshopType}
-          onChange={(value) => updateInfo({ workshopType: value })}
-        />
-        <Field
-          label="مقدم الورشة"
-          value={info.facilitator}
-          onChange={(value) => updateInfo({ facilitator: value })}
-          required
-        />
+        <label className="field">
+          <span>نوع البرنامج</span>
+          <select
+            value={info.programType}
+            onChange={(event) =>
+              updateInfo({
+                programType: event.target.value as Info["programType"],
+                workshopType: event.target.selectedOptions[0]?.text ?? "",
+              })
+            }
+          >
+            <option value="">اختر النوع</option>
+            <option value="TECHNICAL">تقني</option>
+            <option value="TECHNICAL_EDUCATIONAL">تقني تعليمي</option>
+            <option value="PROFESSIONAL">مهني</option>
+            <option value="PROFESSIONAL_EDUCATIONAL">مهني تعليمي</option>
+            <option value="EDUCATIONAL">تربوي</option>
+            <option value="EDUCATIONAL_EDUCATIONAL">تربوي تعليمي</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>منفذ الورشة</span>
+          <select
+            value={info.facilitatorStaffId}
+            onChange={(event) => {
+              const selected = staff.find((item) => item.id === event.target.value);
+              updateInfo({ facilitatorStaffId: event.target.value, facilitator: selected?.fullName ?? "" });
+            }}
+          >
+            <option value="">اختر أحد المنسوبين</option>
+            {staff.map((item) => (
+              <option value={item.id} key={item.id}>
+                {item.fullName}
+                {item.jobTitle ? ` — ${item.jobTitle}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
         <Field
           label="الجهة المقدمة"
           value={info.providerOrganization}

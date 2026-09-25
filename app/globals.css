@@ -341,6 +341,21 @@ html { background: var(--background); }
 .cancelled-note strong { color: var(--danger); }
 .report-metric { background: var(--emerald-soft); border-color: color-mix(in srgb, var(--emerald) 45%, var(--border)); }
 .report-metric strong, .metric-value, .positive { color: var(--emerald); }
+.plan-import-actions, .plan-program-heading, .plan-detail-summary, .plan-card-grid { display: flex; gap: 10px; }
+.plan-import-actions { flex-wrap: wrap; margin: 14px 0; }
+.plan-program-list { display: grid; gap: 12px; margin-top: 14px; }
+.plan-program-row, .plan-card, .plan-detail-summary { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.plan-program-row { padding: 14px; display: grid; gap: 12px; }
+.plan-program-heading { align-items: center; justify-content: space-between; }
+.plan-program-heading small { color: var(--muted); margin-inline-start: auto; }
+.plan-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+.plan-card { color: var(--text); padding: 16px; display: grid; gap: 12px; text-decoration: none; transition: border-color .16s ease, transform .16s ease; }
+.plan-card:hover { border-color: var(--emerald); transform: translateY(-1px); }
+.plan-card h2 { margin: 3px 0; font-size: 17px; }.plan-card p, .plan-card small { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.plan-detail-summary { padding: 14px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }.plan-detail-summary > div { display: grid; gap: 5px; min-width: 150px; }.plan-detail-summary span { color: var(--muted); font-size: 10px; }.plan-detail-summary strong { font-size: 13px; }
+.plan-report-action { display: grid; gap: 6px; }.plan-report-action small { font-size: 10px; }
+@media (max-width: 900px) { .plan-card-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .plan-import-actions, .plan-import-actions .button, .plan-detail-summary .button, .plan-report-action { width: 100%; }.plan-detail-summary > div { flex: 1 1 42%; min-width: 0; } }
 .teacher-status { color: var(--emerald); background: color-mix(in srgb, var(--emerald) 14%, var(--surface)); }
 .teacher-status-post_assessment_available { color: var(--warning); background: color-mix(in srgb, var(--warning) 15%, var(--surface)); }
 .report-meta-card, .report-metric-card, .report-filters, .teacher-feedback-panel, .follow-up-list li, .distribution-table { background: var(--surface); border-color: var(--border); }

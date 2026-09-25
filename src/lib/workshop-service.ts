@@ -5,6 +5,7 @@ import { effectiveWorkshopStatus, getWorkshopEffectiveState } from "./workshop";
 import { validateWorkshopSchedule } from "./workshop-schedule";
 import { serverNow } from "./clock";
 import { validateCriteriaWeights } from "./criteria";
+import { refreshProfessionalGrowthPlanStatus } from "./professional-growth-plans";
 
 export async function approveWorkshop(schoolId: string, workshopId: string) {
   // Keep the legacy service entry point behind the same transactional
@@ -25,10 +26,15 @@ export async function finalizeWorkshopMeasurement(schoolId: string, workshopId: 
         endsAt: true,
         finalizedAt: true,
         cancelledAt: true,
+        professionalGrowthPlanId: true,
+        facilitatorStaffId: true,
+        programType: true,
       },
     });
     if (!workshop || workshop.finalizedAt || workshop.cancelledAt)
       throw new Error("WORKSHOP_ALREADY_FINALIZED");
+    if (workshop.professionalGrowthPlanId && (!workshop.facilitatorStaffId || !workshop.programType))
+      throw new Error("WORKSHOP_PROGRAM_METADATA_REQUIRED");
     if (workshop.title.trim().length < 2 || workshop.title === "مسودة ورشة")
       throw new Error("WORKSHOP_INVALID_DETAILS");
     const schedule = validateWorkshopSchedule(
@@ -39,9 +45,18 @@ export async function finalizeWorkshopMeasurement(schoolId: string, workshopId: 
       },
     );
     if (!schedule.ok) throw new Error(schedule.code);
-    const participants = await tx.workshopParticipant.findMany({ where: { workshopId }, select: { id: true } });
-    const criteria = await tx.workshopCriterion.findMany({ where: { workshopId }, select: { id: true, weight: true } });
-    const assessments = await tx.managerAssessment.findMany({ where: { workshopId, phase: AssessmentPhase.PRE }, select: { participantId: true, criterionId: true, score: true } });
+    const participants = await tx.workshopParticipant.findMany({
+      where: { workshopId },
+      select: { id: true },
+    });
+    const criteria = await tx.workshopCriterion.findMany({
+      where: { workshopId },
+      select: { id: true, weight: true },
+    });
+    const assessments = await tx.managerAssessment.findMany({
+      where: { workshopId, phase: AssessmentPhase.PRE },
+      select: { participantId: true, criterionId: true, score: true },
+    });
     if (!participants.length) throw new Error("WORKSHOP_INCOMPLETE");
     const weightValidation = validateCriteriaWeights(criteria);
     if (!weightValidation.ok && weightValidation.code === "CRITERIA_REQUIRED")
@@ -101,6 +116,12 @@ export async function finalizeWorkshopMeasurement(schoolId: string, workshopId: 
         },
       },
     });
+    if (workshop.professionalGrowthPlanId)
+      await refreshProfessionalGrowthPlanStatus(tx, {
+        schoolId,
+        planId: workshop.professionalGrowthPlanId,
+        userId,
+      });
     return tx.workshop.findUniqueOrThrow({ where: { id: workshopId } });
   });
 }
@@ -124,22 +145,67 @@ export async function finalizePostAssessment(schoolId: string, workshopId: strin
         finalizedAt: true,
         cancelledAt: true,
         postAssessmentSubmittedAt: true,
+        professionalGrowthPlanId: true,
       },
     });
     if (!workshop) throw new Error("WORKSHOP_NOT_FOUND");
     const school = await tx.school.findUniqueOrThrow({
       where: { id: schoolId },
-      select: { id: true, name: true, ministryCode: true, educationAdministration: true, region: true, city: true, educationStage: true, schoolType: true, genderType: true },
+      select: {
+        id: true,
+        name: true,
+        ministryCode: true,
+        educationAdministration: true,
+        region: true,
+        city: true,
+        educationStage: true,
+        schoolType: true,
+        genderType: true,
+      },
     });
-    const participantRows = await tx.workshopParticipant.findMany({ where: { workshopId }, select: { id: true, staffId: true } });
-    const staffRows = await tx.staffMember.findMany({ where: { id: { in: participantRows.map((item) => item.staffId) } }, select: { id: true, fullName: true, jobTitle: true } });
+    const participantRows = await tx.workshopParticipant.findMany({
+      where: { workshopId },
+      select: { id: true, staffId: true },
+    });
+    const staffRows = await tx.staffMember.findMany({
+      where: { id: { in: participantRows.map((item) => item.staffId) } },
+      select: { id: true, fullName: true, jobTitle: true },
+    });
     const staffById = new Map(staffRows.map((staff) => [staff.id, staff]));
-    const participants = participantRows.map((participant) => ({ ...participant, staff: staffById.get(participant.staffId) ?? { id: participant.staffId, fullName: "مشارك", jobTitle: null } }));
-    const criteria = await tx.workshopCriterion.findMany({ where: { workshopId }, orderBy: { displayOrder: "asc" } });
-    const evaluationRows = await tx.teacherWorkshopEvaluation.findMany({ where: { workshopId, status: AssessmentStatus.SUBMITTED }, select: { id: true, rating: true, contentQuality: true, needFit: true, deliveryQuality: true, applicability: true } });
-    const responseRows = await tx.teacherCriterionEvaluation.findMany({ where: { evaluationId: { in: evaluationRows.map((item) => item.id) } }, select: { evaluationId: true, criterionId: true, rating: true } });
-    const evaluations = evaluationRows.map((evaluation) => ({ ...evaluation, criterionResponses: responseRows.filter((response) => response.evaluationId === evaluation.id) }));
-    const assessments = await tx.managerAssessment.findMany({ where: { workshopId, phase: { in: [AssessmentPhase.PRE, AssessmentPhase.POST] } } });
+    const participants = participantRows.map((participant) => ({
+      ...participant,
+      staff: staffById.get(participant.staffId) ?? {
+        id: participant.staffId,
+        fullName: "مشارك",
+        jobTitle: null,
+      },
+    }));
+    const criteria = await tx.workshopCriterion.findMany({
+      where: { workshopId },
+      orderBy: { displayOrder: "asc" },
+    });
+    const evaluationRows = await tx.teacherWorkshopEvaluation.findMany({
+      where: { workshopId, status: AssessmentStatus.SUBMITTED },
+      select: {
+        id: true,
+        rating: true,
+        contentQuality: true,
+        needFit: true,
+        deliveryQuality: true,
+        applicability: true,
+      },
+    });
+    const responseRows = await tx.teacherCriterionEvaluation.findMany({
+      where: { evaluationId: { in: evaluationRows.map((item) => item.id) } },
+      select: { evaluationId: true, criterionId: true, rating: true },
+    });
+    const evaluations = evaluationRows.map((evaluation) => ({
+      ...evaluation,
+      criterionResponses: responseRows.filter((response) => response.evaluationId === evaluation.id),
+    }));
+    const assessments = await tx.managerAssessment.findMany({
+      where: { workshopId, phase: { in: [AssessmentPhase.PRE, AssessmentPhase.POST] } },
+    });
     const state = getWorkshopEffectiveState(workshop);
     if (state !== WorkshopStatus.POST_ASSESSMENT_AVAILABLE) throw new Error("WORKSHOP_NOT_READY");
     const expected = participants.length * criteria.length;
@@ -153,7 +219,13 @@ export async function finalizePostAssessment(schoolId: string, workshopId: strin
     if (pre.length !== expected) throw new Error("PRE_ASSESSMENT_INCOMPLETE");
     const now = serverNow();
     const locked = await tx.workshop.updateMany({
-      where: { id: workshopId, schoolId, deletedAt: null, postAssessmentSubmittedAt: null, cancelledAt: null },
+      where: {
+        id: workshopId,
+        schoolId,
+        deletedAt: null,
+        postAssessmentSubmittedAt: null,
+        cancelledAt: null,
+      },
       data: { postAssessmentSubmittedAt: now, completedAt: now, status: WorkshopStatus.COMPLETED },
     });
     if (locked.count !== 1) throw new Error("WORKSHOP_ALREADY_FINALIZED");
@@ -288,6 +360,12 @@ export async function finalizePostAssessment(schoolId: string, workshopId: strin
         metadata: { engineVersion: IMPACT_ENGINE_VERSION, immutable: true },
       },
     });
+    if (workshop.professionalGrowthPlanId)
+      await refreshProfessionalGrowthPlanStatus(tx, {
+        schoolId,
+        planId: workshop.professionalGrowthPlanId,
+        userId,
+      });
     return report;
   });
 }

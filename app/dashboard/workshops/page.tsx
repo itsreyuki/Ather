@@ -1,4 +1,4 @@
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen, Plus, Route } from "lucide-react";
 import Link from "next/link";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { PageHeader } from "@/src/components/ui/page-header";
@@ -64,9 +64,14 @@ export default async function WorkshopsPage({
         title="الورش والبرامج"
         description="أنشئ الورش، أدر مراحل القياس، وتابع جاهزية التقارير."
         action={
-          <Link className="button button-primary" href="/dashboard/workshops/new">
-            <Plus size={16} /> ورشة جديدة
-          </Link>
+          <div className="page-header-actions">
+            <Link className="button button-secondary" href="/dashboard/professional-growth-plans/new">
+              <Route size={16} /> خطة نمو مهني
+            </Link>
+            <Link className="button button-primary" href="/dashboard/workshops/new">
+              <Plus size={16} /> ورشة جديدة
+            </Link>
+          </div>
         }
       />
       <form className="archive-filters" method="get">

@@ -83,6 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       "WORKSHOP_INCOMPLETE",
       "WORKSHOP_WEIGHTS_INVALID",
       "PRE_ASSESSMENT_INCOMPLETE",
+      "WORKSHOP_PROGRAM_METADATA_REQUIRED",
     ]);
     const status =
       validation.has(message) || message.includes("NOT_READY") || message.includes("INCOMPLETE") ? 422 : 409;
@@ -94,6 +95,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       WORKSHOP_INCOMPLETE: "أضف مشاركًا ومعيارًا وأكمل البيانات المطلوبة",
       WORKSHOP_WEIGHTS_INVALID: "يجب أن يساوي مجموع أوزان المعايير 100٪",
       PRE_ASSESSMENT_INCOMPLETE: "أكمل التقييم القبلي لكل مشارك ومعيار",
+      WORKSHOP_PROGRAM_METADATA_REQUIRED: "اختر نوع البرنامج ومنفذًا من منسوبي المدرسة قبل الاعتماد",
     };
     return NextResponse.json(
       {

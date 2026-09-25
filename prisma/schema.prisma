@@ -80,6 +80,21 @@ enum WorkshopDeliveryMode {
   HYBRID
 }
 
+enum ProgramType {
+  TECHNICAL
+  TECHNICAL_EDUCATIONAL
+  PROFESSIONAL
+  PROFESSIONAL_EDUCATIONAL
+  EDUCATIONAL
+  EDUCATIONAL_EDUCATIONAL
+}
+
+enum ProfessionalGrowthPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
 enum FollowUpMeasurementStatus {
   PLANNED
   OPEN
@@ -141,6 +156,8 @@ model School {
   templates   CriterionTemplate[]
   workshopTemplates WorkshopTemplate[]
   reports     ReportSnapshot[]
+  professionalGrowthPlans ProfessionalGrowthPlan[]
+  professionalGrowthPlanReports ProfessionalGrowthPlanReportSnapshot[]
   notifications Notification[]
   teacherSessions TeacherSession[]
   followUpMeasurements FollowUpMeasurement[]
@@ -235,6 +252,7 @@ model StaffMember {
   updatedAt       DateTime           @updatedAt
   school          School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   participants    WorkshopParticipant[]
+  facilitatedWorkshops Workshop[] @relation("WorkshopFacilitator")
   evaluations     TeacherWorkshopEvaluation[]
   otpChallenges   OTPChallenge[]
   teacherSessions TeacherSession[]
@@ -281,6 +299,9 @@ model Workshop {
   objectives    String?
   notes         String?
   templateId    String?
+  professionalGrowthPlanId String?
+  facilitatorStaffId String?
+  programType   ProgramType?
   startsAt      DateTime?
   endsAt        DateTime?
   status        WorkshopStatus   @default(DRAFT)
@@ -301,10 +322,42 @@ model Workshop {
   evaluations   TeacherWorkshopEvaluation[]
   report        ReportSnapshot?
   template       WorkshopTemplate? @relation("WorkshopFromTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  professionalGrowthPlan ProfessionalGrowthPlan? @relation(fields: [professionalGrowthPlanId], references: [id], onDelete: SetNull)
+  facilitatorStaff StaffMember? @relation("WorkshopFacilitator", fields: [facilitatorStaffId], references: [id], onDelete: SetNull)
   followUps     FollowUpMeasurement[]
   @@index([schoolId, status, startsAt])
   @@index([schoolId, status, endsAt])
   @@index([schoolId, deletedAt, updatedAt])
+  @@index([professionalGrowthPlanId, status])
+  @@index([facilitatorStaffId])
+}
+
+model ProfessionalGrowthPlan {
+  id          String                       @id @default(cuid())
+  schoolId    String
+  title       String
+  periodLabel String
+  status      ProfessionalGrowthPlanStatus @default(DRAFT)
+  activatedAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+  school      School                       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  programs    Workshop[]
+  report      ProfessionalGrowthPlanReportSnapshot?
+  @@index([schoolId, status, updatedAt])
+}
+
+model ProfessionalGrowthPlanReportSnapshot {
+  id          String                 @id @default(cuid())
+  schoolId    String
+  planId      String                 @unique
+  generatedAt DateTime               @default(now())
+  immutable   Boolean                @default(true)
+  snapshot    Json
+  school      School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  plan        ProfessionalGrowthPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@index([schoolId, generatedAt])
 }
 
 model WorkshopParticipant {
