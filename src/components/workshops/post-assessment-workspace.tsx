@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { RatingStepper } from "@/src/components/ui/rating-stepper";
 import { StatusBadge } from "@/src/components/ui/status-badge";
 
 type Participant = {
@@ -59,12 +60,6 @@ export function PostAssessmentWorkspace({
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر حفظ التقييم");
     }
-  }
-  function focusCell(row: number, column: number, direction: -1 | 1) {
-    const target = document
-      .querySelector(`[data-post-row="${row}"]`)
-      ?.querySelectorAll<HTMLInputElement>("input[data-post-cell]")?.[column + direction];
-    target?.focus();
   }
   async function finalize() {
     if (!confirmed) return;
@@ -212,8 +207,8 @@ export function PostAssessmentWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {visible.map((person, rowIndex) => (
-                  <tr data-post-row={rowIndex} key={person.participantId}>
+                {visible.map((person) => (
+                  <tr key={person.participantId}>
                     <th>
                       {person.fullName}
                       <small>{person.jobTitle ?? "—"}</small>
@@ -225,29 +220,16 @@ export function PostAssessmentWorkspace({
                           : ""}
                       </small>
                     </th>
-                    {criteria.map((criterion, columnIndex) => {
+                    {criteria.map((criterion) => {
                       const key = `${person.participantId}:${criterion.id}`;
                       return (
                         <td key={criterion.id}>
-                          <input
-                            data-post-cell
-                            value={scores[key] ?? ""}
-                            type="number"
-                            min="1"
-                            max="5"
+                          <RatingStepper
+                            value={scores[key]}
+                            label={`${person.fullName} — ${criterion.name}`}
+                            dataCell="post"
                             disabled={busy}
-                            aria-label={`${person.fullName} ${criterion.name}`}
-                            onChange={(event) => {
-                              const value = Number(event.target.value);
-                              if (value >= 1 && value <= 5)
-                                void saveScore(person.participantId, criterion.id, value);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-                                event.preventDefault();
-                                focusCell(rowIndex, columnIndex, event.key === "ArrowRight" ? 1 : -1);
-                              }
-                            }}
+                            onChange={(value) => void saveScore(person.participantId, criterion.id, value)}
                           />
                           {!hidePre && <small className="pre-score">قبلي: {preScores[key] ?? "—"}</small>}
                         </td>
@@ -278,16 +260,11 @@ export function PostAssessmentWorkspace({
                         {criterion.name}
                         {!hidePre && <small>قبلي: {preScores[key] ?? "—"}</small>}
                       </span>
-                      <input
-                        value={scores[key] ?? ""}
-                        type="number"
-                        min="1"
-                        max="5"
-                        onChange={(event) => {
-                          const value = Number(event.target.value);
-                          if (value >= 1 && value <= 5)
-                            void saveScore(person.participantId, criterion.id, value);
-                        }}
+                      <RatingStepper
+                        value={scores[key]}
+                        label={`${person.fullName} — ${criterion.name}`}
+                        disabled={busy}
+                        onChange={(value) => void saveScore(person.participantId, criterion.id, value)}
                       />
                     </label>
                   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileUp, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Download, FileUp, Plus, Search, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -22,6 +22,109 @@ type Program = {
   matchState?: "MATCHED" | "MISSING" | "AMBIGUOUS";
   resolvedFromImport?: boolean;
 };
+
+function StaffMultiSelect({
+  staff,
+  value,
+  onChange,
+}: {
+  staff: Staff[];
+  value: string[];
+  onChange: (value: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase("ar");
+  const filtered = staff.filter((item) =>
+    `${item.fullName} ${item.jobTitle ?? ""}`.toLocaleLowerCase("ar").includes(normalizedQuery),
+  );
+  const selectedStaff = value.map((id) => staff.find((item) => item.id === id)).filter(Boolean) as Staff[];
+
+  function toggle(id: string) {
+    onChange(value.includes(id) ? value.filter((item) => item !== id) : [...value, id]);
+  }
+
+  return (
+    <div className="staff-multi-select">
+      <button
+        type="button"
+        className={`staff-multi-trigger ${open ? "open" : ""}`}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>
+          <strong>{value.length ? `تم اختيار ${value.length.toLocaleString("ar-SA")}` : "اختر المشاركين"}</strong>
+          <small>{value.length ? "يمكنك تعديل الاختيار من القائمة" : "ابحث واختر أكثر من منسوب بسهولة"}</small>
+        </span>
+        <ChevronDown size={17} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="staff-multi-menu">
+          <div className="staff-multi-search">
+            <Search size={15} aria-hidden="true" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="ابحث بالاسم أو المسمى"
+              aria-label="البحث عن مشارك"
+            />
+            <button type="button" aria-label="إغلاق قائمة المشاركين" onClick={() => setOpen(false)}>
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="staff-multi-menu-heading">
+            <span>{filtered.length.toLocaleString("ar-SA")} منسوبًا</span>
+            {filtered.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const filteredIds = filtered.map((item) => item.id);
+                  const allSelected = filteredIds.every((id) => value.includes(id));
+                  onChange(allSelected ? value.filter((id) => !filteredIds.includes(id)) : Array.from(new Set([...value, ...filteredIds])));
+                }}
+              >
+                {filtered.every((item) => value.includes(item.id)) ? "إزالة الظاهرين" : "اختيار الظاهرين"}
+              </button>
+            )}
+          </div>
+          <div className="staff-multi-options" role="listbox" aria-label="المشاركون" aria-multiselectable="true">
+            {filtered.map((item) => {
+              const selected = value.includes(item.id);
+              return (
+                <label className={`staff-multi-option ${selected ? "selected" : ""}`} key={item.id}>
+                  <input type="checkbox" checked={selected} onChange={() => toggle(item.id)} />
+                  <span>
+                    <strong>{item.fullName}</strong>
+                    <small>{item.jobTitle ?? "منسوب"}</small>
+                  </span>
+                  {selected && <Check size={15} aria-hidden="true" />}
+                </label>
+              );
+            })}
+            {filtered.length === 0 && <p className="staff-multi-empty">لا توجد نتائج مطابقة.</p>}
+          </div>
+          <button type="button" className="staff-multi-done" onClick={() => setOpen(false)}>
+            تم — {value.length.toLocaleString("ar-SA")} مشاركًا
+          </button>
+        </div>
+      )}
+      {selectedStaff.length > 0 && (
+        <div className="staff-selected-chips" aria-label="المشاركون المختارون">
+          {selectedStaff.slice(0, 4).map((item) => (
+            <span key={item.id}>
+              {item.fullName}
+              <button type="button" aria-label={`إزالة ${item.fullName}`} onClick={() => toggle(item.id)}>
+                <X size={11} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+          {selectedStaff.length > 4 && <small>+{(selectedStaff.length - 4).toLocaleString("ar-SA")} آخرون</small>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const types: Array<[ProgramType, string]> = [
   ["TECHNICAL", "تقني"],
@@ -240,25 +343,14 @@ export function ProfessionalGrowthPlanBuilder({ staff }: { staff: Staff[] }) {
                   ))}
                 </select>
               </label>
-              <label className="field">
+              <div className="field">
                 <span>المشاركون</span>
-                <select
-                  multiple
+                <StaffMultiSelect
+                  staff={staff}
                   value={program.participantIds}
-                  onChange={(event) =>
-                    update(program.key, {
-                      participantIds: Array.from(event.target.selectedOptions, (option) => option.value),
-                    })
-                  }
-                >
-                  {staff.map((item) => (
-                    <option value={item.id} key={item.id}>
-                      {item.fullName}
-                    </option>
-                  ))}
-                </select>
-                <small>استخدم Ctrl أو ⌘ لاختيار أكثر من منسوب.</small>
-              </label>
+                  onChange={(participantIds) => update(program.key, { participantIds })}
+                />
+              </div>
             </div>
           </article>
         ))}

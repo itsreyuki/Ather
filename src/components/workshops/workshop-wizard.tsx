@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Plus, Save, Trash
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmAction } from "@/src/components/ui/confirm-action";
+import { RatingStepper } from "@/src/components/ui/rating-stepper";
 import { StatusBadge } from "@/src/components/ui/status-badge";
 
 type Staff = {
@@ -685,19 +686,29 @@ function CriteriaStep({
       .then((data) => setTemplates(data.templates ?? []));
   }, []);
   const total = criteria.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
+  function equalWeights(items: Criterion[]) {
+    if (!items.length) return items;
+    const each = Number((100 / items.length).toFixed(2));
+    return items.map((item, index) => ({
+      ...item,
+      weight: index === items.length - 1 ? Number((100 - each * (items.length - 1)).toFixed(2)) : each,
+    }));
+  }
   function add(name = "") {
-    setCriteria((current) => [
-      ...current,
-      {
-        clientKey: crypto.randomUUID(),
-        name,
-        description: "",
-        category: "",
-        guidance: "",
-        weight: 0,
-        targetValue: null,
-      },
-    ]);
+    setCriteria((current) =>
+      equalWeights([
+        ...current,
+        {
+          clientKey: crypto.randomUUID(),
+          name,
+          description: "",
+          category: "",
+          guidance: "",
+          weight: 0,
+          targetValue: null,
+        },
+      ]),
+    );
   }
   function update(index: number, patch: Partial<Criterion>) {
     setCriteria((current) =>
@@ -706,13 +717,29 @@ function CriteriaStep({
   }
   function distribute() {
     if (!criteria.length) return;
-    const each = Number((100 / criteria.length).toFixed(2));
-    setCriteria((current) =>
-      current.map((item, index) => ({
-        ...item,
-        weight: index === current.length - 1 ? Number((100 - each * (current.length - 1)).toFixed(2)) : each,
-      })),
-    );
+    setCriteria((current) => equalWeights(current));
+  }
+  function updateWeight(index: number, rawValue: number) {
+    setCriteria((current) => {
+      if (current.length === 1) return current.map((item) => ({ ...item, weight: 100 }));
+      const value = Math.min(100, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
+      const otherIndexes = current.map((_, itemIndex) => itemIndex).filter((itemIndex) => itemIndex !== index);
+      const othersTotal = otherIndexes.reduce((sum, itemIndex) => sum + Math.max(0, Number(current[itemIndex].weight) || 0), 0);
+      const remaining = 100 - value;
+      let allocated = 0;
+      return current.map((item, itemIndex) => {
+        if (itemIndex === index) return { ...item, weight: Number(value.toFixed(2)) };
+        const position = otherIndexes.indexOf(itemIndex);
+        if (position === otherIndexes.length - 1) return { ...item, weight: Number((remaining - allocated).toFixed(2)) };
+        const share = othersTotal > 0 ? (Math.max(0, Number(item.weight) || 0) / othersTotal) * remaining : remaining / otherIndexes.length;
+        const rounded = Number(share.toFixed(2));
+        allocated += rounded;
+        return { ...item, weight: rounded };
+      });
+    });
+  }
+  function removeCriterion(index: number) {
+    setCriteria((current) => equalWeights(current.filter((_, itemIndex) => itemIndex !== index)));
   }
   function move(index: number, direction: -1 | 1) {
     setCriteria((current) => {
@@ -752,10 +779,11 @@ function CriteriaStep({
       <div className="wizard-panel-heading">
         <h2>معايير قياس الأثر</h2>
         <p>
-          أنشئ المعايير أو استخدم قالبًا. مجموع الأوزان الحالي:{" "}
-          <strong className={Math.abs(total - 100) < 0.01 ? "valid-total" : "invalid-total"}>
-            {total.toLocaleString("ar-SA")}٪
-          </strong>
+          أنشئ المعايير أو استخدم قالبًا. تتوزع الأوزان تلقائيًا وتحافظ على مجموع 100٪ عند تعديل أي معيار.
+          <span className={`criteria-total ${Math.abs(total - 100) < 0.01 ? "valid-total" : "invalid-total"}`}>
+            <i><b style={{ width: `${Math.min(100, Math.max(0, total))}%` }} /></i>
+            <strong>{total.toLocaleString("ar-SA")}٪</strong>
+          </span>
         </p>
       </div>
       <div className="template-toolbar">
@@ -795,7 +823,7 @@ function CriteriaStep({
                 </button>
                 <button
                   onClick={() =>
-                    setCriteria((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                    removeCriterion(index)
                   }
                   aria-label="حذف المعيار"
                 >
@@ -815,17 +843,26 @@ function CriteriaStep({
                 value={item.category}
                 onChange={(value) => update(index, { category: value })}
               />
-              <label className="field">
-                <span>الوزن ٪</span>
+              <div className="criterion-weight-field">
+                <div className="criterion-weight-label">
+                  <span>وزن المعيار</span>
+                  <output>{item.weight.toLocaleString("ar-SA")}٪</output>
+                </div>
                 <input
-                  type="number"
+                  className="criterion-weight-range"
+                  type="range"
                   min="0"
                   max="100"
                   step="0.01"
                   value={item.weight}
-                  onChange={(event) => update(index, { weight: Number(event.target.value) })}
+                  aria-label={`وزن ${item.name || `المعيار ${index + 1}`}`}
+                  onChange={(event) => updateWeight(index, Number(event.target.value))}
                 />
-              </label>
+                <div className="criterion-weight-meter" aria-hidden="true">
+                  <span style={{ width: `${item.weight}%` }} />
+                </div>
+                <small>عند التعديل، يعاد توزيع بقية الأوزان تلقائيًا.</small>
+              </div>
               <label className="field">
                 <span>هدف اختياري (1–5)</span>
                 <input
@@ -901,13 +938,6 @@ function EvaluationStep({
     (person) => !incompleteOnly || criteria.some((criterion) => !scores[keyFor(person.id, criterion.id!)]),
   );
   const expected = staff.length * criteria.length;
-  function focusCell(personIndex: number, criterionIndex: number, direction: "next" | "previous") {
-    const next = direction === "next" ? criterionIndex + 1 : criterionIndex - 1;
-    const row = document.querySelector(`[data-evaluation-row="${personIndex}"]`);
-    const inputs = row?.querySelectorAll<HTMLInputElement>("input[data-evaluation-cell]");
-    const target = inputs?.[next];
-    target?.focus();
-  }
   return (
     <section className="wizard-panel evaluation-panel">
       <div className="wizard-panel-heading">
@@ -985,29 +1015,13 @@ function EvaluationStep({
                     المصدر: {person.importSourceName ?? person.importSourceFileName ?? "استيراد نور"}
                   </small>
                 </th>
-                {criteria.map((criterion, criterionIndex) => (
+                {criteria.map((criterion) => (
                   <td key={criterion.id}>
-                    <input
-                      data-evaluation-cell
-                      value={scores[keyFor(person.id, criterion.id!)] ?? ""}
-                      type="number"
-                      min="1"
-                      max="5"
-                      aria-label={`${person.fullName} ${criterion.name}`}
-                      onChange={(event) => {
-                        const value = Number(event.target.value);
-                        if (value >= 1 && value <= 5) void saveScore(person.id, criterion.id!, value);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-                          event.preventDefault();
-                          focusCell(
-                            personIndex,
-                            criterionIndex,
-                            event.key === "ArrowRight" ? "next" : "previous",
-                          );
-                        }
-                      }}
+                    <RatingStepper
+                      value={scores[keyFor(person.id, criterion.id!)]}
+                      label={`${person.fullName} — ${criterion.name}`}
+                      dataCell="evaluation"
+                      onChange={(value) => void saveScore(person.id, criterion.id!, value)}
                     />
                   </td>
                 ))}
@@ -1027,15 +1041,10 @@ function EvaluationStep({
             {criteria.map((criterion) => (
               <label key={criterion.id}>
                 <span>{criterion.name}</span>
-                <input
-                  value={scores[keyFor(person.id, criterion.id!)] ?? ""}
-                  type="number"
-                  min="1"
-                  max="5"
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (value >= 1 && value <= 5) void saveScore(person.id, criterion.id!, value);
-                  }}
+                <RatingStepper
+                  value={scores[keyFor(person.id, criterion.id!)]}
+                  label={`${person.fullName} — ${criterion.name}`}
+                  onChange={(value) => void saveScore(person.id, criterion.id!, value)}
                 />
               </label>
             ))}
