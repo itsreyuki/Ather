@@ -28,24 +28,31 @@
   --text-on-primary: #d9fff0;
   --divider: #1f2a26;
   --shadow-color: rgba(0,0,0,.2);
+  --ambient-a: rgba(38,184,121,.16);
+  --ambient-b: rgba(78,159,255,.14);
+  --ambient-c: rgba(123,92,255,.10);
+  --ambient-glow: rgba(38,184,121,.08);
 }
 
 [data-theme="light"] {
   color-scheme: light;
   --background: #f5f8f6; --surface: #ffffff; --surface-raised: #edf4f0; --border: #c7d6ce; --muted: #52675d; --text: #17251f; --emerald: #087d4d; --emerald-soft: #d7eee2; --blue: #185c99; --danger: #b33d45; --warning: #8d5d0b; --neutral: #536577; --focus: #145f98;
   --on-primary: #ffffff; --surface-deep: #f7faf8; --surface-overlay: #ffffff; --surface-sidebar: #e7f0eb; --text-soft: #344d41; --text-on-primary: #0e5b39; --divider: #d9e5df; --shadow-color: rgba(24,61,44,.14);
+  --ambient-a: rgba(8,125,77,.12); --ambient-b: rgba(24,92,153,.10); --ambient-c: rgba(130,70,160,.07); --ambient-glow: rgba(8,125,77,.06);
 }
 
 [data-theme="official"] {
   color-scheme: dark;
   --background: #1a241d; --surface: #263329; --surface-raised: #314034; --border: #52634b; --muted: #b8c4ad; --text: #f1f4ea; --emerald: #a7bd63; --emerald-soft: #405235; --blue: #79a9bd; --danger: #e08376; --warning: #e0b45b; --neutral: #b1bcae; --focus: #9cc9d5;
   --on-primary: #172117; --surface-deep: #202b23; --surface-overlay: #2c392e; --surface-sidebar: #202b23; --text-soft: #d0d8c8; --text-on-primary: #eaf2d9; --divider: #405044; --shadow-color: rgba(0,0,0,.24);
+  --ambient-a: rgba(167,189,99,.17); --ambient-b: rgba(121,169,189,.14); --ambient-c: rgba(224,180,91,.10); --ambient-glow: rgba(167,189,99,.09);
 }
 
 [data-theme="pink"] {
   color-scheme: dark;
   --background: #261720; --surface: #33212c; --surface-raised: #432b38; --border: #694655; --muted: #d9b6c5; --text: #fff2f7; --emerald: #e384a6; --emerald-soft: #5d3547; --blue: #9bb5e7; --danger: #ed7d8b; --warning: #e5ba68; --neutral: #c6b7c1; --focus: #f09ab5;
   --on-primary: #2b1520; --surface-deep: #2b1b25; --surface-overlay: #3a2632; --surface-sidebar: #2c1c26; --text-soft: #efd3df; --text-on-primary: #fff0f5; --divider: #563744; --shadow-color: rgba(35,11,23,.28);
+  --ambient-a: rgba(227,132,166,.16); --ambient-b: rgba(155,181,231,.14); --ambient-c: rgba(190,102,190,.11); --ambient-glow: rgba(227,132,166,.09);
 }
 
 @theme inline {
@@ -73,6 +80,21 @@ body {
   -webkit-font-smoothing: antialiased;
   transition: background-color .18s ease, color .18s ease;
 }
+.site-content { position: relative; z-index: 1; min-height: 100dvh; }
+.ambient-background { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; isolation: isolate; background: radial-gradient(circle at 50% 0%, var(--ambient-glow), transparent 42%); }
+.ambient-background::after { content: ""; position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(to right, color-mix(in srgb, var(--ambient-a) 22%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--ambient-b) 18%, transparent) 1px, transparent 1px); background-size: 82px 82px; mask-image: radial-gradient(ellipse at center, #000, transparent 78%); }
+.ambient-polygon { position: absolute; display: block; width: var(--ambient-size); height: var(--ambient-size); top: var(--ambient-top); left: var(--ambient-left); opacity: .72; filter: blur(var(--ambient-blur)); background: linear-gradient(135deg, var(--ambient-a), var(--ambient-b) 58%, var(--ambient-c)); border: 1px solid color-mix(in srgb, var(--ambient-a) 70%, var(--border)); clip-path: polygon(var(--ambient-shape)); animation: athar-ambient-float var(--ambient-duration) ease-in-out var(--ambient-delay) infinite alternate; transform: translate3d(0, 0, 0) rotate(var(--ambient-rotation)); }
+.ambient-polygon::after { content: ""; position: absolute; inset: 12%; background: linear-gradient(115deg, transparent, color-mix(in srgb, var(--ambient-a) 45%, transparent), transparent 70%); clip-path: inherit; animation: athar-ambient-sheen 8s ease-in-out infinite alternate; }
+.ambient-polygon-a { --ambient-size: 22vw; --ambient-top: 7vh; --ambient-left: 7vw; --ambient-blur: 1px; --ambient-duration: 15s; --ambient-delay: -2s; --ambient-rotation: 12deg; --ambient-shape: 8% 20%, 68% 0, 100% 42%, 77% 100%, 19% 83%, 0 47%; }
+.ambient-polygon-b { --ambient-size: 29vw; --ambient-top: 53vh; --ambient-left: 67vw; --ambient-blur: 2px; --ambient-duration: 21s; --ambient-delay: -9s; --ambient-rotation: -18deg; --ambient-shape: 23% 0, 91% 13%, 100% 71%, 57% 100%, 5% 78%, 0 24%; }
+.ambient-polygon-c { --ambient-size: 15vw; --ambient-top: 30vh; --ambient-left: 42vw; --ambient-blur: 0; --ambient-duration: 18s; --ambient-delay: -5s; --ambient-rotation: 25deg; --ambient-shape: 50% 0, 100% 24%, 83% 84%, 25% 100%, 0 51%; opacity: .48; }
+.ambient-polygon-d { --ambient-size: 35vw; --ambient-top: -13vh; --ambient-left: 72vw; --ambient-blur: 9px; --ambient-duration: 25s; --ambient-delay: -13s; --ambient-rotation: 8deg; --ambient-shape: 0 19%, 39% 0, 100% 18%, 88% 71%, 41% 100%, 8% 73%; opacity: .42; }
+.ambient-polygon-e { --ambient-size: 18vw; --ambient-top: 77vh; --ambient-left: 18vw; --ambient-blur: 4px; --ambient-duration: 17s; --ambient-delay: -7s; --ambient-rotation: -9deg; --ambient-shape: 18% 0, 100% 31%, 76% 100%, 8% 81%, 0 30%; opacity: .55; }
+.ambient-polygon-f { --ambient-size: 12vw; --ambient-top: 62vh; --ambient-left: 45vw; --ambient-blur: 1px; --ambient-duration: 13s; --ambient-delay: -4s; --ambient-rotation: 41deg; --ambient-shape: 28% 0, 100% 26%, 72% 100%, 0 74%; opacity: .38; }
+.ambient-polygon-g { --ambient-size: 25vw; --ambient-top: 14vh; --ambient-left: -8vw; --ambient-blur: 7px; --ambient-duration: 23s; --ambient-delay: -15s; --ambient-rotation: -24deg; --ambient-shape: 0 38%, 28% 0, 85% 6%, 100% 62%, 58% 100%, 10% 78%; opacity: .36; }
+@keyframes athar-ambient-float { 0% { transform: translate3d(-2vw, -1vh, 0) rotate(var(--ambient-rotation)) scale(.96); } 45% { transform: translate3d(2vw, 2vh, 0) rotate(calc(var(--ambient-rotation) + 8deg)) scale(1.04); } 100% { transform: translate3d(-1vw, 4vh, 0) rotate(calc(var(--ambient-rotation) - 6deg)) scale(1); } }
+@keyframes athar-ambient-sheen { 0% { transform: translateX(-18%) rotate(-8deg); opacity: .25; } 100% { transform: translateX(20%) rotate(8deg); opacity: .75; } }
+@media (prefers-reduced-motion: reduce) { .ambient-polygon, .ambient-polygon::after { animation: none; } }
 button, input { font: inherit; }
 button { cursor: pointer; }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 70%, transparent); outline-offset: 3px; }
