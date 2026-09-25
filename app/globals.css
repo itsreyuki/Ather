@@ -421,6 +421,16 @@ html { background: var(--background); }
 .evaluation-table .rating-stepper { min-width: 103px; }
 .mobile-evaluation-card .rating-stepper { flex: none; }
 .pre-score { display: block; color: var(--blue); font-size: 9px; margin-top: 4px; }
+.calendar-date-field { min-width: 0; }
+.calendar-date-control { display: grid; gap: 6px; }
+.calendar-date-control > input, .calendar-date-control > .calendar-date-mode-input { min-height: 44px; }
+.calendar-mode-switch { display: inline-flex; width: fit-content; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-deep); }
+.calendar-mode-switch button { min-height: 27px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; font-size: 10px; }
+.calendar-mode-switch button:hover, .calendar-mode-switch button.active { color: var(--text); background: var(--surface-raised); }
+.calendar-mode-switch button.active { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--emerald) 55%, transparent); }
+.calendar-date-hint { color: var(--blue); font-size: 9px; line-height: 1.6; }
+.calendar-date-error { color: var(--danger); font-size: 9px; line-height: 1.6; }
+.calendar-date-field input[dir="ltr"] { text-align: left; letter-spacing: .03em; }
 .plan-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
 .plan-card { color: var(--text); padding: 16px; display: grid; gap: 12px; text-decoration: none; transition: border-color .16s ease, transform .16s ease; }
 .plan-card:hover { border-color: var(--emerald); transform: translateY(-1px); }

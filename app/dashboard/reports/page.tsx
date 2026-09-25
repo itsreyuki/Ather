@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { CriterionTrends } from "@/src/components/reports/criterion-trends";
 import { ReportComparison } from "@/src/components/reports/report-comparison";
 import { ReportsOverviewCharts } from "@/src/components/reports/reports-overview-charts";
+import { CalendarDateInput } from "@/src/components/ui/calendar-date-input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { StatCard } from "@/src/components/ui/stat-card";
 import { StatusBadge } from "@/src/components/ui/status-badge";
@@ -132,14 +133,8 @@ export default async function ReportsPage({
       />
       <main className="reports-overview-page">
         <form className="report-filters" method="get">
-          <div>
-            <label htmlFor="report-from">من</label>
-            <input id="report-from" type="date" name="from" defaultValue={value("from")} />
-          </div>
-          <div>
-            <label htmlFor="report-to">إلى</label>
-            <input id="report-to" type="date" name="to" defaultValue={value("to")} />
-          </div>
+          <CalendarDateInput label="من" name="from" defaultValue={value("from")} dateOnly />
+          <CalendarDateInput label="إلى" name="to" defaultValue={value("to")} dateOnly />
           <div>
             <label htmlFor="report-category">المجال</label>
             <select id="report-category" name="category" defaultValue={category ?? ""}>

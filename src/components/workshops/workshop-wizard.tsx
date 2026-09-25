@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Plus, Save, Trash
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmAction } from "@/src/components/ui/confirm-action";
+import { CalendarDateInput } from "@/src/components/ui/calendar-date-input";
 import { RatingStepper } from "@/src/components/ui/rating-stepper";
 import { StatusBadge } from "@/src/components/ui/status-badge";
 
@@ -491,18 +492,16 @@ function InfoStep({
         />
       </div>
       <div className="form-grid">
-        <Field
+        <CalendarDateInput
           label="تاريخ ووقت البداية"
           value={info.startsAt}
           onChange={(value) => updateInfo({ startsAt: value })}
-          type="datetime-local"
           required
         />
-        <Field
+        <CalendarDateInput
           label="تاريخ ووقت النهاية"
           value={info.endsAt}
           onChange={(value) => updateInfo({ endsAt: value })}
-          type="datetime-local"
           required
         />
       </div>
