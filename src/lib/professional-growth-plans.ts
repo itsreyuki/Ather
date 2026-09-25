@@ -80,11 +80,54 @@ export async function createProfessionalPlanTemplate() {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "ATHAR";
   const sheet = workbook.addWorksheet("البرامج");
-  sheet.views = [{ rightToLeft: true }];
-  sheet.addRow([...templateHeaders]);
-  sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-  sheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF176B49" } };
-  sheet.columns = [{ width: 34 }, { width: 24 }, { width: 30 }];
+  sheet.views = [{ rightToLeft: true, state: "frozen", ySplit: 1, zoomScale: 95 }];
+  sheet.properties.defaultRowHeight = 24;
+  sheet.properties.tabColor = { argb: "FF176B49" };
+  sheet.pageSetup = {
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    paperSize: 9,
+    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
+  };
+  sheet.columns = [
+    { header: templateHeaders[0], key: "title", width: 34 },
+    { header: templateHeaders[1], key: "programType", width: 24 },
+    { header: templateHeaders[2], key: "facilitator", width: 30 },
+  ];
+  sheet.addRow([]);
+  const header = sheet.getRow(1);
+  header.height = 30;
+  header.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Arial", size: 11 };
+  header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF176B49" } };
+  header.alignment = { horizontal: "right", vertical: "middle", readingOrder: "rtl" };
+  header.border = { bottom: { style: "medium", color: { argb: "FF0E4A34" } } };
+  header.getCell(1).note = "اكتب اسم البرنامج كما تريد ظهوره في الخطة.";
+  header.getCell(2).note = "اختر نوعًا من القائمة: تقني، تقني تعليمي، مهني، مهني تعليمي، تربوي، تربوي تعليمي.";
+  header.getCell(3).note = "اكتب اسم المنفذ كما هو في قائمة المنسوبين. سيطابقه النظام تلقائيًا أو يطلب منك تحديده.";
+  for (let rowNumber = 2; rowNumber <= MAX_PROGRAMS_PER_PLAN + 1; rowNumber += 1) {
+    const row = sheet.getRow(rowNumber);
+    row.height = 22;
+    row.alignment = { horizontal: "right", vertical: "middle", readingOrder: "rtl", wrapText: true };
+    row.border = {
+      bottom: { style: "hair", color: { argb: "FFD7E5DE" } },
+    };
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rowNumber % 2 === 0 ? "FFF7FBF8" : "FFFFFFFF" } };
+    });
+  }
+  for (let rowNumber = 2; rowNumber <= MAX_PROGRAMS_PER_PLAN + 1; rowNumber += 1) {
+    sheet.getCell(rowNumber, 2).dataValidation = {
+      type: "list",
+      allowBlank: true,
+      formulae: ['"تقني,تقني تعليمي,مهني,مهني تعليمي,تربوي,تربوي تعليمي"'],
+      showErrorMessage: true,
+      errorTitle: "نوع البرنامج غير صحيح",
+      error: "اختر نوع البرنامج من القائمة المحددة في النموذج.",
+    };
+  }
+  sheet.autoFilter = "A1:C101";
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 

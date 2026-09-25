@@ -4,6 +4,7 @@ import {
   matchProfessionalFacilitator,
   normalizeProfessionalName,
   parseProfessionalPlanWorkbook,
+  createProfessionalPlanTemplate,
 } from "../src/lib/professional-growth-plans";
 
 const staff = [
@@ -13,6 +14,17 @@ const staff = [
 ];
 
 describe("professional growth plans", () => {
+  it("creates an Arabic RTL-friendly workbook template", async () => {
+    const bytes = await createProfessionalPlanTemplate();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+    const sheet = workbook.getWorksheet("البرامج");
+    expect(sheet?.views[0]).toMatchObject({ rightToLeft: true, state: "frozen", ySplit: 1 });
+    expect(sheet?.getRow(1).values).toEqual([, "اسم البرنامج", "نوع البرنامج", "المنفذ"]);
+    expect(sheet?.getCell("B2").dataValidation?.type).toBe("list");
+    expect(sheet?.getCell("A2").alignment?.readingOrder).toBe("rtl");
+  });
+
   it("normalizes Arabic executor names and matches full, first/second, and first/last variants", () => {
     expect(normalizeProfessionalName("  أَحْمَد، محمد الغامدي ")).toBe("احمد محمد الغامدي");
     expect(matchProfessionalFacilitator("أحمد محمد", staff)).toMatchObject({
