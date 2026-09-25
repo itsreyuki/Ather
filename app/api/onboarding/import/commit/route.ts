@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "الملف لا يطابق قالب قائمة المنسوبين الرسمي من نظام نور. حمّل تقرير PDF الرسمي من نور كما هو، أو راجع مثال الأعمدة الظاهر في شاشة الاستيراد.",
+            "الملف لا يطابق قوالب نور المدعومة. حمّل تقرير قائمة المعلمين أو قائمة المنسوبين الرسمي من نور كما هو، ثم أعد المحاولة.",
           template: analysis.noorTemplate,
         },
         { status: 422 },
@@ -113,8 +113,13 @@ export async function POST(request: Request) {
         ? {
             name: row.sourceName ?? "مصدر غير معروف",
             fileName: upload.sources[row.sourceIndex ?? 0]?.fileName ?? upload.fileName,
+            format: row.format ?? "NOOR_TEACHER_ROSTER",
           }
-        : { name: upload.source.fileName, fileName: upload.source.fileName };
+        : {
+            name: upload.source.fileName,
+            fileName: upload.source.fileName,
+            format: row.format ?? analysis.format,
+          };
     const missingStaff = existing.filter(
       (staff) => staff.active && !incomingHashes.has(staff.nationalIdHash),
     );
@@ -195,6 +200,9 @@ export async function POST(request: Request) {
             source: "NOOR_IMPORT",
             importSourceName: sourceForRow(row).name,
             importSourceFileName: sourceForRow(row).fileName,
+            importFormat: sourceForRow(row).format,
+            educationAdministration: row.educationAdministration ?? undefined,
+            sourceSchoolName: row.sourceSchoolName ?? undefined,
             importReviewFlags: row.reviewFlags,
             importReviewRequired: row.reviewFlags.length > 0,
             active: true,
@@ -224,6 +232,9 @@ export async function POST(request: Request) {
             : {}),
           importSourceName: sourceForRow(row).name,
           importSourceFileName: sourceForRow(row).fileName,
+          importFormat: sourceForRow(row).format,
+          educationAdministration: row.educationAdministration ?? null,
+          sourceSchoolName: row.sourceSchoolName ?? null,
           importReviewFlags: row.reviewFlags,
           importReviewRequired: row.reviewFlags.length > 0,
           manualOverrideFields: staffOverrideFields(current.manualOverrideFields).filter(

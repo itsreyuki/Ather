@@ -11,6 +11,11 @@ import { staffOverrideFields } from "@/src/lib/staff-overrides";
 
 const dateFormatter = new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium" });
 const sourceLabel: Record<string, string> = { NOOR_IMPORT: "استيراد من نظام نور", MANUAL: "إضافة يدوية" };
+const importFormatLabels: Record<string, string> = {
+  NOOR_TEACHER_ROSTER: "قائمة المعلمين",
+  NOOR_STAFF_ROSTER: "قائمة المنسوبين",
+  NOOR_ADMINISTRATIVE_ROSTER: "قائمة المنسوبين",
+};
 function reviewFlags(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is { message?: string } => Boolean(item && typeof item === "object"))
@@ -109,7 +114,22 @@ export default async function StaffDetailsPage({ params }: { params: Promise<{ i
                   sourceLabel[staff.source] ??
                   staff.source}
               </strong>
+              <small className="table-subtext">
+                {importFormatLabels[staff.importFormat ?? ""] ?? "استيراد من نظام نور"}
+              </small>
             </div>
+            {staff.educationAdministration && (
+              <div>
+                <span>إدارة التعليم</span>
+                <strong>{staff.educationAdministration}</strong>
+              </div>
+            )}
+            {staff.sourceSchoolName && (
+              <div>
+                <span>المدرسة في المصدر</span>
+                <strong>{staff.sourceSchoolName}</strong>
+              </div>
+            )}
             <div>
               <span>تاريخ الإضافة</span>
               <strong>{dateFormatter.format(staff.createdAt)}</strong>

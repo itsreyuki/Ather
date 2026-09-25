@@ -13,6 +13,7 @@ type Staff = {
   specialization: string | null;
   importSourceName?: string | null;
   importSourceFileName?: string | null;
+  importFormat?: string | null;
   importReviewRequired?: boolean;
 };
 type Criterion = {
@@ -613,6 +614,10 @@ function ParticipantsStep({
               </small>
               <small className="participant-source">
                 المصدر: {item.importSourceName ?? item.importSourceFileName ?? "استيراد نور"}
+                {item.importFormat === "NOOR_STAFF_ROSTER" ||
+                item.importFormat === "NOOR_ADMINISTRATIVE_ROSTER"
+                  ? " · منسوبين"
+                  : ""}
                 {reviewCount(item.importReviewRequired) > 0 ? " · يحتاج مطابقة" : ""}
               </small>
             </span>

@@ -224,6 +224,9 @@ model StaffMember {
   source          StaffSource        @default(NOOR_IMPORT)
   importSourceName String?
   importSourceFileName String?
+  importFormat String?
+  educationAdministration String?
+  sourceSchoolName String?
   importReviewFlags Json              @default("[]")
   importReviewRequired Boolean         @default(false)
   manualOverrideFields Json          @default("[]")

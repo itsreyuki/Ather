@@ -15,6 +15,15 @@ export const STAFF_IMPORT_MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 export const STAFF_IMPORT_MAX_ROWS = 50_000;
 export const STAFF_IMPORT_MAX_PREVIEW_ROWS = 20;
 export const STAFF_IMPORT_MAX_PDF_PAGES = 100;
+export type StaffImportFormat =
+  "NOOR_TEACHER_ROSTER" | "NOOR_STAFF_ROSTER" | "NOOR_ADMINISTRATIVE_ROSTER" | "MIXED";
+export const staffImportFormatLabels: Record<StaffImportFormat, string> = {
+  NOOR_TEACHER_ROSTER: "قائمة المعلمين",
+  NOOR_STAFF_ROSTER: "قائمة المنسوبين",
+  // Legacy value kept so previously imported records continue to render correctly.
+  NOOR_ADMINISTRATIVE_ROSTER: "قائمة المنسوبين",
+  MIXED: "مصادر بصيغ متعددة",
+};
 const fields = [
   "fullName",
   "nationalId",
@@ -54,6 +63,7 @@ export type ParsedStaffRow = {
   rowNumber: number;
   sourceIndex?: number;
   sourceName?: string;
+  format?: Exclude<StaffImportFormat, "MIXED">;
   fullName: string;
   nationalIdHash: string;
   nationalIdLast4: string;
@@ -65,6 +75,8 @@ export type ParsedStaffRow = {
   specialization: string | null;
   email: string | null;
   employeeNumber: string | null;
+  educationAdministration: string | null;
+  sourceSchoolName: string | null;
   errors: string[];
   warnings: string[];
   reviewFlags: StaffImportReviewFlag[];
@@ -74,6 +86,7 @@ export type ParsedStaffRow = {
   duplicatePhoneInSchool: boolean;
 };
 export type StaffImportAnalysis = {
+  format: StaffImportFormat;
   sheetName: string;
   headers: string[];
   mapping: StaffMapping;
@@ -378,6 +391,64 @@ export function parseNoorPdfRows(text: string) {
   return rows;
 }
 
+const adminRosterHeaderPattern = /اسم\s*المستخدم.*الاسم\s*الرباعي.*إدارة\s*التعليم.*المدرسة/u;
+const administrativeRecordStartPattern = /^(\d{8,11}|[A-Za-z][A-Za-z0-9_.-]{2,63})(.+)$/u;
+const schoolNameStartPattern =
+  /(?=(?:روضة|رياض\s+أطفال|الطفولة\s+المبكرة|ابتدائي|ابتدائية|متوسط|متوسطة|ثانوي|ثانوية|مدرسة|مجمع)(?:\s|$))/u;
+
+function normalizeNoorAdministrativePdfText(value: string) {
+  return value
+    .replace(/[يىی]/g, "ي")
+    .replace(/ھ/g, "ه")
+    .replace(/ک/g, "ك")
+    .replace(/ﷲ/g, "الله")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function isNoorStaffRosterPdf(text: string) {
+  const normalized = normalizeNoorAdministrativePdfText(text);
+  return adminRosterHeaderPattern.test(normalized) && !/(?:الجوال|التوظيف|المسمى الوظيفي)/u.test(normalized);
+}
+
+export function parseNoorStaffRosterPdfRows(text: string) {
+  const rows: Array<[string, string, string, string]> = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = normalizeNoorAdministrativePdfText(rawLine);
+    const match = line.match(administrativeRecordStartPattern);
+    if (!match) continue;
+    const username = match[1]!.trim();
+    const content = match[2]!.trim();
+    const administrationMarker = "الإدارة العامة للتعليم";
+    const administrationIndex = content.indexOf(administrationMarker);
+    if (administrationIndex <= 0) continue;
+    const fullName = content.slice(0, administrationIndex).trim();
+    const administrationAndSchool = content.slice(administrationIndex).trim();
+    const schoolMatch = administrationAndSchool.match(schoolNameStartPattern);
+    const schoolIndex = schoolMatch?.index;
+    const educationAdministration =
+      schoolIndex && schoolIndex > 0
+        ? administrationAndSchool.slice(0, schoolIndex).trim()
+        : administrationAndSchool;
+    const sourceSchoolName =
+      schoolIndex && schoolIndex > 0 ? administrationAndSchool.slice(schoolIndex).trim() : "";
+    if (fullName && educationAdministration)
+      rows.push([username, fullName, educationAdministration, sourceSchoolName]);
+  }
+  return rows;
+}
+
+function staffRosterNoorTemplate(): NoorTemplateCheck {
+  return {
+    matches: true,
+    matchedColumns: ["اسم المستخدم", "الاسم الرباعي", "إدارة التعليم", "المدرسة"],
+    missingRequired: [],
+    missingRecommended: ["الجوال", "المسمى الوظيفي", "التخصص"],
+    issues: ["هذه قائمة منسوبين من نور؛ لا تحتوي الصيغة عادةً على رقم جوال أو تخصص أو مسمى وظيفي."],
+    expectedColumns: ["اسم المستخدم", "الاسم الرباعي", "إدارة التعليم", "المدرسة"],
+  };
+}
+
 async function analyzeNoorPdf(input: {
   bytes: ArrayBuffer | Uint8Array;
   fileName: string;
@@ -401,6 +472,46 @@ async function analyzeNoorPdf(input: {
   }
   if (pageCount > STAFF_IMPORT_MAX_PDF_PAGES) throw new Error("ملف PDF يتجاوز الحد المسموح لعدد الصفحات.");
   if (text.length > 25_000_000) throw new Error("النص المستخرج من ملف PDF كبير جدًا للمعالجة الآمنة.");
+  if (isNoorStaffRosterPdf(text)) {
+    const rows = parseNoorStaffRosterPdfRows(text);
+    if (!rows.length)
+      throw new Error("تعذر قراءة سجلات المنسوبين. استخدم ملف المنسوبين الرسمي النصي الصادر مباشرة من نور.");
+    const workbook = new ExcelJS.Workbook();
+    workbook
+      .addWorksheet("قائمة المنسوبين")
+      .addRows([
+        [...NOOR_ROSTER_TEMPLATE.expectedColumns, "إدارة التعليم", "المدرسة"],
+        ...rows.map(([username, fullName, educationAdministration, sourceSchoolName]) => [
+          username,
+          fullName,
+          "",
+          "",
+          "",
+          "",
+          "",
+          educationAdministration,
+          sourceSchoolName,
+        ]),
+      ]);
+    const xlsxBytes = await workbook.xlsx.writeBuffer();
+    const analysis = await analyzeStaffWorkbook({
+      bytes: xlsxBytes,
+      fileName: `${input.fileName}.xlsx`,
+      mapping: input.mapping,
+      corrections: input.corrections,
+      existingIdHashes: input.existingIdHashes,
+      existingPhoneHashes: input.existingPhoneHashes,
+    });
+    analysis.format = "NOOR_STAFF_ROSTER";
+    analysis.noorTemplate = staffRosterNoorTemplate();
+    analysis.rows.forEach((row, index) => {
+      const source = rows[index];
+      row.format = "NOOR_STAFF_ROSTER";
+      row.educationAdministration = source?.[2] ?? null;
+      row.sourceSchoolName = source?.[3] || null;
+    });
+    return analysis;
+  }
   const rows = parseNoorPdfRows(text);
   if (!text.includes("الجوال") && !text.includes("التوظيف"))
     throw new Error("ملف PDF لا يطابق تقرير المنسوبين من نظام نور.");
@@ -411,7 +522,7 @@ async function analyzeNoorPdf(input: {
   const workbook = new ExcelJS.Workbook();
   workbook.addWorksheet("قائمة المنسوبين").addRows([NOOR_ROSTER_TEMPLATE.expectedColumns, ...rows]);
   const xlsxBytes = await workbook.xlsx.writeBuffer();
-  return analyzeStaffWorkbook({
+  const analysis = await analyzeStaffWorkbook({
     bytes: xlsxBytes,
     fileName: `${input.fileName}.xlsx`,
     mapping: input.mapping,
@@ -419,6 +530,11 @@ async function analyzeNoorPdf(input: {
     existingIdHashes: input.existingIdHashes,
     existingPhoneHashes: input.existingPhoneHashes,
   });
+  analysis.format = "NOOR_TEACHER_ROSTER";
+  analysis.rows.forEach((row) => {
+    row.format = "NOOR_TEACHER_ROSTER";
+  });
+  return analysis;
 }
 
 export async function analyzeStaffWorkbook(input: {
@@ -546,6 +662,8 @@ export async function analyzeStaffWorkbook(input: {
       specialization,
       email,
       employeeNumber,
+      educationAdministration: null,
+      sourceSchoolName: null,
       errors,
       warnings,
       reviewFlags: [],
@@ -564,6 +682,7 @@ export async function analyzeStaffWorkbook(input: {
   const missingPhoneRows = rows.filter((row) => !row.phone).length;
   const reviewRows = rows.filter((row) => row.warnings.length > 0 || row.duplicateInSchool).length;
   return {
+    format: "NOOR_TEACHER_ROSTER",
     sheetName: worksheet.name,
     headers,
     mapping,
@@ -596,6 +715,7 @@ export type StaffImportSourceSummary = {
   extractedCount: number;
   validCount: number;
   reviewCount: number;
+  format: Exclude<StaffImportFormat, "MIXED">;
 };
 export type MultiStaffImportAnalysis = StaffImportAnalysis & { sourceSummaries: StaffImportSourceSummary[] };
 
@@ -752,6 +872,7 @@ export async function analyzeStaffImportSources(input: {
         ...original,
         sourceIndex,
         sourceName: source.sourceName,
+        format: analysis.format === "MIXED" ? "NOOR_TEACHER_ROSTER" : analysis.format,
         errors: [...original.errors],
         warnings: [...original.warnings],
         reviewFlags: [...original.reviewFlags],
@@ -829,6 +950,7 @@ export async function analyzeStaffImportSources(input: {
     extractedCount: rows.filter((row) => row.sourceIndex === sourceIndex).length,
     validCount: rows.filter((row) => row.sourceIndex === sourceIndex && row.errors.length === 0).length,
     reviewCount: rows.filter((row) => row.sourceIndex === sourceIndex && row.reviewFlags.length > 0).length,
+    format: analyzed[sourceIndex]!.analysis.format as Exclude<StaffImportFormat, "MIXED">,
   }));
   const noorTemplate: NoorTemplateCheck = {
     ...first.noorTemplate,
@@ -843,6 +965,7 @@ export async function analyzeStaffImportSources(input: {
   const invalidRows = rows.filter((row) => row.errors.length > 0).length;
   return {
     ...first,
+    format: analyzed.every(({ analysis }) => analysis.format === first.format) ? first.format : "MIXED",
     sheetName: "\u0645\u0635\u0627\u062f\u0631 \u0645\u062a\u0639\u062f\u062f\u0629",
     rows,
     noorTemplate,

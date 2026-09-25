@@ -13,12 +13,15 @@ type PreviewRow = {
   rowNumber: number;
   sourceIndex?: number;
   sourceName?: string;
+  format?: "NOOR_TEACHER_ROSTER" | "NOOR_STAFF_ROSTER" | "NOOR_ADMINISTRATIVE_ROSTER";
   fullName: string;
   nationalIdLast4: string;
   phoneLast4: string | null;
   jobTitle: string | null;
   specialization: string | null;
   email: string | null;
+  educationAdministration: string | null;
+  sourceSchoolName: string | null;
   errors: string[];
   warnings: string[];
   reviewFlags: Array<{ kind: string; message: string }>;
@@ -34,10 +37,12 @@ type SourceSummary = {
   extractedCount: number;
   validCount: number;
   reviewCount: number;
+  format: "NOOR_TEACHER_ROSTER" | "NOOR_STAFF_ROSTER" | "NOOR_ADMINISTRATIVE_ROSTER";
 };
 type SourceDraft = { id: number; name: string; file: File | null; fingerprint?: string };
 type Preview = {
   fileName: string;
+  format: "NOOR_TEACHER_ROSTER" | "NOOR_STAFF_ROSTER" | "NOOR_ADMINISTRATIVE_ROSTER" | "MIXED";
   sheetName: string;
   headers: string[];
   mapping: StaffMapping;
@@ -72,6 +77,12 @@ type CommitResult = {
   updatedRows: DiffRow[];
   sources?: SourceSummary[];
 };
+
+const formatLabels = {
+  NOOR_TEACHER_ROSTER: "قائمة المعلمين",
+  NOOR_STAFF_ROSTER: "قائمة المنسوبين",
+  NOOR_ADMINISTRATIVE_ROSTER: "قائمة المنسوبين",
+} as const;
 
 const fields: Array<{ key: StaffField; label: string; required?: boolean }> = [
   { key: "fullName", label: "الاسم", required: true },
@@ -289,7 +300,10 @@ export function StaffImportWizard({ schoolName }: { schoolName: string }) {
           >
             <UploadCloud size={27} />
             <strong>{file ? "تغيير الملف" : "اسحب ملف نور هنا أو اختره"}</strong>
-            <span>PDF نصي صادر مباشرة من نور · الحد الأعلى 10MB · لا يتم الاحتفاظ بالملف الخام</span>
+            <span>
+              PDF نصي رسمي صادر مباشرة من نور للمعلمين أو المنسوبين · الحد الأعلى 10MB · لا يتم الاحتفاظ
+              بالملف الخام
+            </span>
             <input
               ref={inputRef}
               type="file"
@@ -558,7 +572,9 @@ function PreviewPanel({
               <div className="source-summary-row" key={`${source.name}-${index}`}>
                 <span>
                   <strong>{source.name}</strong>
-                  <small>{source.fileName}</small>
+                  <small>
+                    {formatLabels[source.format]} · {source.fileName}
+                  </small>
                 </span>
                 <StatusBadge tone="success">
                   {source.extractedCount.toLocaleString("ar-SA")} منسوبًا
@@ -595,6 +611,8 @@ function PreviewPanel({
         </div>
       </section>
       <div className="import-meta">
+        صيغة المصدر:{" "}
+        <strong>{formatLabels[preview.format as keyof typeof formatLabels] ?? "مصادر بصيغ متعددة"}</strong> ·
         ورقة البيانات: <strong>{preview.sheetName}</strong> · الصفوف التي تحتوي معادلات: {preview.formulaRows}{" "}
         · الصفوف الفارغة المستبعدة: {preview.emptyRows}
         {preview.issueRowsTruncated ? " · يتم عرض أول ٢٠٠ صف يحتاج تصحيحًا" : ""}
@@ -617,6 +635,7 @@ function PreviewPanel({
                 <td>
                   {multiSources ? `${row.sourceName ?? "ملف"} · ` : ""}
                   {row.rowNumber}
+                  {row.format && <small className="table-subtext">{formatLabels[row.format]}</small>}
                 </td>
                 <td>{row.fullName || "—"}</td>
                 <td>•••• {row.nationalIdLast4 || "—"}</td>
@@ -778,7 +797,9 @@ function SuccessScreen({
               <div className="source-summary-row" key={`${source.name}-${index}`}>
                 <span>
                   <strong>{source.name}</strong>
-                  <small>{source.fileName}</small>
+                  <small>
+                    {formatLabels[source.format]} · {source.fileName}
+                  </small>
                 </span>
                 <StatusBadge tone="success">
                   {source.extractedCount.toLocaleString("ar-SA")} منسوبًا

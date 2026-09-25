@@ -53,6 +53,7 @@ export default async function WorkshopDetailsPage({ params }: { params: Promise<
               jobTitle: true,
               importSourceName: true,
               importSourceFileName: true,
+              importFormat: true,
             },
           },
           assessments: {
@@ -242,6 +243,7 @@ export default async function WorkshopDetailsPage({ params }: { params: Promise<
                   jobTitle: item.staff.jobTitle,
                   importSourceName: item.staff.importSourceName,
                   importSourceFileName: item.staff.importSourceFileName,
+                  importFormat: item.staff.importFormat,
                 }))}
                 criteria={workshop.criteria.map((item) => ({
                   id: item.id,

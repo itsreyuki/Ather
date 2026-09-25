@@ -10,6 +10,11 @@ import { Permission } from "@/src/lib/permissions";
 
 const pageSize = 20;
 const dateFormatter = new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium" });
+const importFormatLabels: Record<string, string> = {
+  NOOR_TEACHER_ROSTER: "المعلمين",
+  NOOR_STAFF_ROSTER: "المنسوبين",
+  NOOR_ADMINISTRATIVE_ROSTER: "المنسوبين",
+};
 type Query = Record<string, string | string[] | undefined>;
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -200,6 +205,9 @@ export default async function StaffPage({ searchParams }: { searchParams?: Promi
                     <span className="table-source-label">
                       {member.importSourceName ?? member.importSourceFileName ?? "استيراد نور"}
                     </span>
+                    <small className="table-subtext">
+                      {importFormatLabels[member.importFormat ?? ""] ?? "استيراد نور"}
+                    </small>
                     {reviewFlagCount(member.importReviewFlags) > 0 && (
                       <StatusBadge tone="warning">
                         {reviewFlagCount(member.importReviewFlags).toLocaleString("ar-SA")} للمراجعة

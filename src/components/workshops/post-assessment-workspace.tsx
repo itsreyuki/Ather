@@ -12,6 +12,7 @@ type Participant = {
   jobTitle: string | null;
   importSourceName?: string | null;
   importSourceFileName?: string | null;
+  importFormat?: string | null;
 };
 type Criterion = { id: string; name: string; weight: number };
 
@@ -99,6 +100,10 @@ export function PostAssessmentWorkspace({
               <strong>{person.fullName}</strong>
               <small className="participant-source">
                 المصدر: {person.importSourceName ?? person.importSourceFileName ?? "استيراد نور"}
+                {person.importFormat === "NOOR_STAFF_ROSTER" ||
+                person.importFormat === "NOOR_ADMINISTRATIVE_ROSTER"
+                  ? " · منسوبين"
+                  : ""}
               </small>
               <span>
                 {criteria
@@ -212,6 +217,13 @@ export function PostAssessmentWorkspace({
                     <th>
                       {person.fullName}
                       <small>{person.jobTitle ?? "—"}</small>
+                      <small className="participant-source">
+                        المصدر: {person.importSourceName ?? person.importSourceFileName ?? "استيراد نور"}
+                        {person.importFormat === "NOOR_STAFF_ROSTER" ||
+                        person.importFormat === "NOOR_ADMINISTRATIVE_ROSTER"
+                          ? " · منسوبين"
+                          : ""}
+                      </small>
                     </th>
                     {criteria.map((criterion, columnIndex) => {
                       const key = `${person.participantId}:${criterion.id}`;
@@ -251,6 +263,13 @@ export function PostAssessmentWorkspace({
               <article className="mobile-evaluation-card" key={person.participantId}>
                 <strong>{person.fullName}</strong>
                 <small>{person.jobTitle ?? "—"}</small>
+                <small className="participant-source">
+                  المصدر: {person.importSourceName ?? person.importSourceFileName ?? "استيراد نور"}
+                  {person.importFormat === "NOOR_STAFF_ROSTER" ||
+                  person.importFormat === "NOOR_ADMINISTRATIVE_ROSTER"
+                    ? " · منسوبين"
+                    : ""}
+                </small>
                 {criteria.map((criterion) => {
                   const key = `${person.participantId}:${criterion.id}`;
                   return (

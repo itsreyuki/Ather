@@ -33,6 +33,7 @@ export default async function NewWorkshopPage({ searchParams }: { searchParams?:
         specialization: true,
         importSourceName: true,
         importSourceFileName: true,
+        importFormat: true,
         importReviewRequired: true,
       },
     }),

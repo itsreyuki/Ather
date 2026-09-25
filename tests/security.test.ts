@@ -3,7 +3,13 @@ import { criterionMetric, compositeImpact } from "../src/lib/metrics";
 import { hashPassword, normalizeEmail, normalizePhone, verifyPassword } from "../src/lib/security";
 import { registerSchema } from "../src/lib/auth-schemas";
 import ExcelJS from "exceljs";
-import { analyzeStaffImportSources, analyzeStaffWorkbook, parseNoorPdfRows } from "../src/lib/staff-import";
+import {
+  analyzeStaffImportSources,
+  analyzeStaffWorkbook,
+  isNoorStaffRosterPdf,
+  parseNoorStaffRosterPdfRows,
+  parseNoorPdfRows,
+} from "../src/lib/staff-import";
 
 process.env.ID_LOOKUP_SECRET = Buffer.from("test-only-lookup-secret").toString("base64");
 
@@ -79,6 +85,20 @@ describe("impact metrics", () => {
     expect(analysis.duplicatePhoneRows).toBe(1);
     expect(analysis.rows[1]?.duplicatePhoneWithinFile).toBe(true);
     expect(analysis.rows[1]?.errors).toEqual([]);
+  });
+
+  it("recognizes Noor administrative roster PDFs without mapping administrative columns to teacher fields", () => {
+    const text = `حقول البحث
+اسم المستخدمالاسم الرباعيإدارة التعليم المدرسة
+1053243919ریسھ أحمد علي العمريالإدارة العامة للتعلیم بمنطقة الباحةمتوسطة عائشة بنت أبي بكرالصدیق بالباحة
+1036669552سعیده حسین سعید العمريالإدارة العامة للتعلیم بمنطقة الباحةمتوسطة عائشة بنت أبي بكرالصدیق بالباحة`;
+    expect(isNoorStaffRosterPdf(text)).toBe(true);
+    const rows = parseNoorStaffRosterPdfRows(text);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.[0]).toBe("1053243919");
+    expect(rows[0]?.[1]).toContain("أحمد علي العمري");
+    expect(rows[0]?.[2]).toContain("الإدارة العامة للتعليم");
+    expect(rows[0]?.[3]).toContain("متوسطة");
   });
 
   it("re-analyzes row corrections and clears the row errors before commit", async () => {
