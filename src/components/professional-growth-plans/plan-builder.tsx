@@ -17,6 +17,8 @@ type Program = {
   title: string;
   programType: ProgramType | "";
   facilitatorStaffId: string;
+  facilitatorName: string;
+  facilitatorMode: "staff" | "custom";
   participantIds: string[];
   sourceName?: string;
   matchState?: "MATCHED" | "MISSING" | "AMBIGUOUS";
@@ -139,6 +141,8 @@ const blank = (): Program => ({
   title: "",
   programType: "",
   facilitatorStaffId: "",
+  facilitatorName: "",
+  facilitatorMode: "staff",
   participantIds: [],
 });
 
@@ -181,6 +185,8 @@ export function ProfessionalGrowthPlanBuilder({ staff }: { staff: Staff[] }) {
             title: item.title,
             programType: item.programType,
             facilitatorStaffId: item.match.staffId ?? "",
+            facilitatorName: "",
+            facilitatorMode: "staff",
             participantIds: [],
             sourceName: item.facilitatorName,
             matchState: item.match.state,
@@ -204,7 +210,7 @@ export function ProfessionalGrowthPlanBuilder({ staff }: { staff: Staff[] }) {
     if (
       programs.some(
         (item) =>
-          !item.title.trim() || !item.programType || !item.facilitatorStaffId || !item.participantIds.length,
+          !item.title.trim() || !item.programType || (!item.facilitatorStaffId && !item.facilitatorName.trim()) || !item.participantIds.length,
       )
     )
       return setError("أكمل اسم ونوع ومنفذ ومشاركي كل برنامج قبل الاعتماد.");
@@ -329,10 +335,13 @@ export function ProfessionalGrowthPlanBuilder({ staff }: { staff: Staff[] }) {
                       : ""}
                 </span>
                 <select
-                  value={program.facilitatorStaffId}
-                  onChange={(event) =>
-                    update(program.key, { facilitatorStaffId: event.target.value, matchState: "MATCHED" })
-                  }
+                  value={program.facilitatorMode === "custom" ? "__CUSTOM__" : program.facilitatorStaffId}
+                  onChange={(event) => {
+                    if (event.target.value === "__CUSTOM__")
+                      update(program.key, { facilitatorMode: "custom", facilitatorStaffId: "", matchState: "MATCHED" });
+                    else
+                      update(program.key, { facilitatorMode: "staff", facilitatorStaffId: event.target.value, facilitatorName: "", matchState: "MATCHED" });
+                  }}
                 >
                   <option value="">حدد المنفذ</option>
                   {staff.map((item) => (
@@ -341,7 +350,16 @@ export function ProfessionalGrowthPlanBuilder({ staff }: { staff: Staff[] }) {
                       {item.jobTitle ? ` — ${item.jobTitle}` : ""}
                     </option>
                   ))}
+                  <option value="__CUSTOM__">+ إضافة اسم منفّذ مخصص</option>
                 </select>
+                {program.facilitatorMode === "custom" && (
+                  <input
+                    value={program.facilitatorName}
+                    onChange={(event) => update(program.key, { facilitatorName: event.target.value })}
+                    placeholder="اكتب اسم المنفّذ كما سيظهر في التقرير"
+                    aria-label="اسم المنفّذ المخصص"
+                  />
+                )}
               </label>
               <div className="field">
                 <span>المشاركون</span>

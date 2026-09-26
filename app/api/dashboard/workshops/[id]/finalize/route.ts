@@ -31,6 +31,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!workshop) return NextResponse.json({ error: "لم يتم العثور على الورشة" }, { status: 404 });
   if (workshop.title.trim().length < 2 || workshop.title === "مسودة ورشة")
     return NextResponse.json({ error: "أدخل اسم الورشة قبل الاعتماد" }, { status: 422 });
+  if (!workshop.facilitator?.trim())
+    return NextResponse.json({ error: "أدخل اسم منفذ الورشة أو اختره من القائمة قبل الاعتماد" }, { status: 422 });
   if (!workshop.startsAt || !workshop.endsAt)
     return NextResponse.json({ error: "تاريخ البداية والنهاية مطلوبان" }, { status: 422 });
   if (workshop.endsAt <= workshop.startsAt)
@@ -77,6 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const message = error instanceof Error ? error.message : "تعذر اعتماد الورشة";
     const validation = new Set([
       "WORKSHOP_INVALID_DETAILS",
+      "WORKSHOP_FACILITATOR_REQUIRED",
       "WORKSHOP_DATES_REQUIRED",
       "WORKSHOP_END_BEFORE_START",
       "WORKSHOP_START_TOO_SOON",
@@ -89,13 +92,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       validation.has(message) || message.includes("NOT_READY") || message.includes("INCOMPLETE") ? 422 : 409;
     const errors: Record<string, string> = {
       WORKSHOP_INVALID_DETAILS: "أدخل تفاصيل الورشة قبل اعتمادها",
+      WORKSHOP_FACILITATOR_REQUIRED: "أدخل اسم منفذ الورشة أو اختره من القائمة قبل الاعتماد",
       WORKSHOP_DATES_REQUIRED: "تاريخا البداية والنهاية مطلوبان",
       WORKSHOP_END_BEFORE_START: "يجب أن تكون النهاية بعد البداية",
       WORKSHOP_START_TOO_SOON: "يجب أن تكون البداية في المستقبل",
       WORKSHOP_INCOMPLETE: "أضف مشاركًا ومعيارًا وأكمل البيانات المطلوبة",
       WORKSHOP_WEIGHTS_INVALID: "يجب أن يساوي مجموع أوزان المعايير 100٪",
       PRE_ASSESSMENT_INCOMPLETE: "أكمل التقييم القبلي لكل مشارك ومعيار",
-      WORKSHOP_PROGRAM_METADATA_REQUIRED: "اختر نوع البرنامج ومنفذًا من منسوبي المدرسة قبل الاعتماد",
+      WORKSHOP_PROGRAM_METADATA_REQUIRED: "اختر نوع البرنامج وأدخل اسم المنفذ قبل اعتماد برنامج الخطة",
     };
     return NextResponse.json(
       {

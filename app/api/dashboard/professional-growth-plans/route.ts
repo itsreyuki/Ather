@@ -9,10 +9,14 @@ import { ProgramType } from "@prisma/client";
 const programSchema = z.object({
   title: z.string().trim().min(2).max(200),
   programType: z.nativeEnum(ProgramType),
-  facilitatorStaffId: z.string().min(1),
+  facilitatorStaffId: z.string().trim().optional(),
+  facilitatorName: z.string().trim().min(2).max(200).optional(),
   participantIds: z.array(z.string().min(1)).min(1).max(500),
   matchState: z.enum(["MATCHED", "MISSING", "AMBIGUOUS"]).optional(),
   resolvedFromImport: z.boolean().optional(),
+}).refine((program) => Boolean(program.facilitatorStaffId || program.facilitatorName?.trim()), {
+  message: "يجب تحديد منسوب أو إدخال اسم منفذ مخصص.",
+  path: ["facilitatorName"],
 });
 const schema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -31,27 +35,29 @@ export async function POST(request: Request) {
   const { title, periodLabel, programs } = parsed.data;
   const schoolId = session.membership!.schoolId;
   const requestedStaffIds = [
-    ...new Set(programs.flatMap((program) => [program.facilitatorStaffId, ...program.participantIds])),
+    ...new Set(programs.flatMap((program) => [program.facilitatorStaffId, ...program.participantIds].filter((id): id is string => Boolean(id)))),
   ];
   const staff = await db.staffMember.findMany({
     where: { schoolId, active: true, id: { in: requestedStaffIds } },
     select: { id: true, fullName: true },
   });
   if (staff.length !== requestedStaffIds.length)
-    return NextResponse.json({ error: "اختر منفذين ومشاركين نشطين من منسوبي المدرسة فقط." }, { status: 422 });
+    return NextResponse.json({ error: "اختر مشاركين نشطين من منسوبي المدرسة، وتأكد من صحة المنفذ." }, { status: 422 });
   const staffById = new Map(staff.map((item) => [item.id, item]));
   const plan = await db.$transaction(async (tx) => {
     const created = await tx.professionalGrowthPlan.create({ data: { schoolId, title, periodLabel } });
     for (const program of programs) {
-      const facilitator = staffById.get(program.facilitatorStaffId)!;
+      const facilitator = program.facilitatorStaffId ? staffById.get(program.facilitatorStaffId) : null;
+      const facilitatorName = facilitator?.fullName ?? program.facilitatorName?.trim();
+      if (!facilitatorName) throw new Error("FACILITATOR_REQUIRED");
       const participantIds = [...new Set(program.participantIds)];
       const workshop = await tx.workshop.create({
         data: {
           schoolId,
           professionalGrowthPlanId: created.id,
           title: program.title,
-          facilitator: facilitator.fullName,
-          facilitatorStaffId: facilitator.id,
+          facilitator: facilitatorName,
+          facilitatorStaffId: facilitator?.id ?? null,
           programType: program.programType,
           workshopType: programTypeLabels[program.programType],
           draftStep: 1,

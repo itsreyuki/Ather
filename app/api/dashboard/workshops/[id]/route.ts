@@ -12,7 +12,7 @@ const schema = z
     title: z.string().trim().max(200).optional(),
     description: z.string().trim().max(2000).optional(),
     facilitator: z.string().trim().max(200).optional(),
-    facilitatorStaffId: z.string().min(1).nullable().optional(),
+    facilitatorStaffId: z.union([z.string().trim().min(1), z.literal("")]).nullable().optional(),
     providerOrganization: z.string().trim().max(200).optional(),
     workshopType: z.string().trim().max(120).optional(),
     programType: z.nativeEnum(ProgramType).nullable().optional(),

@@ -22,6 +22,7 @@ export async function finalizeWorkshopMeasurement(schoolId: string, workshopId: 
       select: {
         id: true,
         title: true,
+        facilitator: true,
         startsAt: true,
         endsAt: true,
         finalizedAt: true,
@@ -33,7 +34,8 @@ export async function finalizeWorkshopMeasurement(schoolId: string, workshopId: 
     });
     if (!workshop || workshop.finalizedAt || workshop.cancelledAt)
       throw new Error("WORKSHOP_ALREADY_FINALIZED");
-    if (workshop.professionalGrowthPlanId && (!workshop.facilitatorStaffId || !workshop.programType))
+    if (!workshop.facilitator?.trim()) throw new Error("WORKSHOP_FACILITATOR_REQUIRED");
+    if (workshop.professionalGrowthPlanId && (!workshop.facilitator?.trim() || !workshop.programType))
       throw new Error("WORKSHOP_PROGRAM_METADATA_REQUIRED");
     if (workshop.title.trim().length < 2 || workshop.title === "مسودة ورشة")
       throw new Error("WORKSHOP_INVALID_DETAILS");

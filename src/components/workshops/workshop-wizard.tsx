@@ -158,7 +158,7 @@ export function WorkshopWizard({ staff, initial }: { staff: Staff[]; initial?: I
     if (step === 0) {
       if (!info.title.trim()) return setError("اسم الورشة مطلوب");
       if (!info.programType) return setError("اختر نوع البرنامج");
-      if (!info.facilitatorStaffId) return setError("اختر منفذ الورشة");
+      if (!info.facilitatorStaffId && !info.facilitator.trim()) return setError("اختر منفذ الورشة أو أدخل اسم منفذ مخصص");
       if (!info.startsAt || !info.endsAt) return setError("تاريخ ووقت البداية والنهاية مطلوبان");
       if (new Date(info.endsAt) <= new Date(info.startsAt))
         return setError("تاريخ النهاية يجب أن يكون بعد البداية");
@@ -401,6 +401,7 @@ function InfoStep({
   staff: Staff[];
   updateInfo: (patch: Partial<Info>) => void;
 }) {
+  const [customFacilitator, setCustomFacilitator] = useState(!info.facilitatorStaffId && Boolean(info.facilitator));
   const duration =
     info.startsAt && info.endsAt && new Date(info.endsAt) > new Date(info.startsAt)
       ? Math.round((new Date(info.endsAt).getTime() - new Date(info.startsAt).getTime()) / 60000)
@@ -441,10 +442,15 @@ function InfoStep({
         <label className="field">
           <span>منفذ الورشة</span>
           <select
-            value={info.facilitatorStaffId}
+            value={customFacilitator ? "__CUSTOM__" : info.facilitatorStaffId}
             onChange={(event) => {
               const selected = staff.find((item) => item.id === event.target.value);
-              updateInfo({ facilitatorStaffId: event.target.value, facilitator: selected?.fullName ?? "" });
+              updateInfo(
+                event.target.value === "__CUSTOM__"
+                  ? { facilitatorStaffId: "", facilitator: "" }
+                  : { facilitatorStaffId: event.target.value, facilitator: selected?.fullName ?? "" },
+              );
+              setCustomFacilitator(event.target.value === "__CUSTOM__");
             }}
           >
             <option value="">اختر أحد المنسوبين</option>
@@ -454,7 +460,16 @@ function InfoStep({
                 {item.jobTitle ? ` — ${item.jobTitle}` : ""}
               </option>
             ))}
+            <option value="__CUSTOM__">+ إضافة اسم منفّذ مخصص</option>
           </select>
+          {customFacilitator && (
+            <input
+              value={info.facilitator}
+              onChange={(event) => updateInfo({ facilitator: event.target.value })}
+              placeholder="اكتب اسم المنفّذ كما سيظهر في التقرير"
+              aria-label="اسم منفّذ الورشة المخصص"
+            />
+          )}
         </label>
         <Field
           label="الجهة المقدمة"
