@@ -12,6 +12,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "CONTACT_ALREADY_USED") return NextResponse.json({ error: "بيانات التواصل مستخدمة بالفعل" }, { status: 409 });
     if (error instanceof Error && error.message === "INVALID_LICENSE_CODE") return NextResponse.json({ error: "كود الرخصة غير صالح" }, { status: 403 });
+    if (error instanceof Error && error.message === "LICENSE_CODE_ALREADY_USED") return NextResponse.json({ error: "تم استخدام كود الرخصة من قبل" }, { status: 409 });
     if (error instanceof Error && error.message === "LICENSE_CODES_NOT_CONFIGURED") return NextResponse.json({ error: "التسجيل غير متاح حاليًا. تواصل مع فريق أثر لتفعيل الرخصة." }, { status: 503 });
     return apiErrorResponse(error, request, "تعذر إنشاء الحساب. حاول مرة أخرى.");
   }

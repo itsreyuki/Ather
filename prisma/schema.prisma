@@ -130,6 +130,7 @@ model User {
   sentTeamInvitations TeamInvitation[] @relation("TeamInvitationInviter")
   privacySettingsUpdates SchoolPrivacySettings[] @relation("PrivacySettingsUpdater")
   dashboardAlertDismissals DashboardAlertDismissal[]
+  redeemedLicenseCodes LicenseCode[] @relation("LicenseCodeRedemption")
 }
 
 model School {
@@ -177,6 +178,27 @@ model DashboardAlertDismissal {
   dismissedBy      User?    @relation(fields: [dismissedByUserId], references: [id], onDelete: SetNull)
   @@unique([schoolId, alertKey, fingerprint])
   @@index([schoolId, dismissedAt])
+}
+
+enum LicenseCodeStatus {
+  ACTIVE
+  REDEEMED
+  REVOKED
+}
+
+model LicenseCode {
+  id             String           @id @default(cuid())
+  codeHash       String           @unique
+  codeLast4      String
+  label          String?
+  status         LicenseCodeStatus @default(ACTIVE)
+  redeemedAt     DateTime?
+  redeemedUserId String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  redeemedBy     User?            @relation("LicenseCodeRedemption", fields: [redeemedUserId], references: [id], onDelete: SetNull)
+  @@index([status, createdAt])
+  @@index([redeemedUserId, redeemedAt])
 }
 
 model SchoolMembership {

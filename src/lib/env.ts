@@ -19,6 +19,8 @@ const envSchema = z.object({
   RATE_LIMIT_STORE: z.enum(["memory", "upstash"]).default("memory"),
   RATE_LIMIT_REDIS_URL: z.string().url().optional().or(z.literal("")),
   RATE_LIMIT_REDIS_TOKEN: z.string().optional(),
+  ATHAR_ADMIN_PATH: z.string().min(20).optional(),
+  ATHAR_ADMIN_SECRET: z.string().min(32).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
 });
 
@@ -34,6 +36,8 @@ const productionSchema = envSchema.extend({
   RATE_LIMIT_STORE: z.literal("upstash"),
   RATE_LIMIT_REDIS_URL: z.string().url(),
   RATE_LIMIT_REDIS_TOKEN: z.string().min(1),
+  ATHAR_ADMIN_PATH: z.string().min(20),
+  ATHAR_ADMIN_SECRET: z.string().min(32),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

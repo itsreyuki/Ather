@@ -5,6 +5,9 @@ import { LandingNavbar } from "@/src/components/landing/landing-navbar";
 import { LaunchAvailability } from "@/src/components/landing/launch-availability";
 import { StickyCta } from "@/src/components/landing/sticky-cta";
 import { LANDING_CONFIG } from "@/src/config/landing";
+import { getLaunchAvailability } from "@/src/lib/license-service";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "أثر | قياس أثر البرامج والورش في مدرستك",
@@ -24,7 +27,8 @@ const faqs = [
   ["لمن صممت منصة أثر؟", "صممت لمديري المدارس والفرق التعليمية التي تريد متابعة أثر الورش والبرامج التدريبية بطريقة منظمة ومفهومة."], ["هل أحتاج نظامًا آخر لتشغيلها؟", "لا. تبدأ من حساب المدير، وتدعم استيراد قائمة المنسوبين، ثم تدير الورش والقياسات والتقارير من داخل المنصة."], ["كيف يعمل القياس القبلي والبعدي؟", "يحدد المدير معايير الأثر وأوزانها، ثم يسجل القياس القبلي والبعدي. تعرض المنصة متوسطات وفروقات وتحسنًا على مقياس 1 إلى 5."], ["هل تقييم المعلمين جزء من مؤشر الأثر؟", "يعرض تقييم المشاركين في قسم مستقل. يمكن استخدامه في المؤشر المركب القابل للضبط، لكنه لا يستبدل نتائج القياس القبلي والبعدي."], ["ماذا يحدث بعد رفع ملف المنسوبين؟", "تحلل المنصة الملف وتعرض السجلات السليمة والتعارضات والحقول الناقصة قبل الاعتماد، حتى تتخذ قرارًا واعيًا قبل الحفظ."], ["هل يمكن تصدير التقارير؟", "نعم، للتقارير المكتملة تتوفر نسخة رسمية للطباعة وPDF وExcel، اعتمادًا على Snapshot تاريخي ثابت."], ["ما الذي يتضمنه عرض الإطلاق؟", "وصول مدى الحياة بسعر 250 ريالًا للدفع لمرة واحدة لأول 10 مشتركين. قد تتغير الأسعار لاحقًا، ويحتفظ المشتركون الأوائل بعرضهم."],
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const availability = await getLaunchAvailability();
   const contactProps = { phone: LANDING_CONFIG.contactPhone, whatsappNumber: LANDING_CONFIG.whatsappNumber, whatsappMessage: LANDING_CONFIG.whatsappMessage };
   return <main className="landing-page">
     <LandingNavbar {...contactProps} />
@@ -41,7 +45,7 @@ export default function HomePage() {
 
       <section className="landing-section" aria-labelledby="reasons-title"><div className="landing-section-heading"><span className="landing-section-label">صُممت لتوفر وقتك</span><h2 id="reasons-title">بساطة في الاستخدام، وعمق عند الحاجة.</h2></div><div className="landing-reasons"><article className="landing-reason"><h3>ابدأ تدريجيًا</h3><p>يمكنك تسجيل الحساب واستكمال المدرسة ثم استيراد المنسوبين قبل الدخول في تفاصيل الورش.</p></article><article className="landing-reason"><h3>لا تتوه في الأرقام</h3><p>تعرض لوحة المدير ما يحتاج انتباهك، بدل إغراقك بعشرات البطاقات.</p></article><article className="landing-reason"><h3>احتفظ بسياقك</h3><p>القوالب وخطط النمو المهني وإعادة الاستيراد تساعدك على العمل المتكرر بسرعة.</p></article></div></section>
 
-      <section className="landing-section" id="pricing" aria-labelledby="pricing-title"><div className="landing-pricing"><div className="landing-pricing-copy"><span className="landing-section-label">جاهز للانطلاق؟</span><h2 id="pricing-title">ابدأ بقياس أثر أوضح اليوم.</h2><p>عرض تأسيسي محدود لمن يريد تجربة دورة العمل كاملة وبناء أساس منظم لقرارات التدريب في مدرسته.</p><div className="landing-actions"><Link className="button button-primary button-large" href="/auth/register">إنشاء حساب مدير <ArrowLeft size={17} /></Link></div></div><div className="landing-pricing-card"><LaunchAvailability totalSlots={LANDING_CONFIG.totalSlots} availableSlots={LANDING_CONFIG.availableSlots} price={LANDING_CONFIG.launchPrice} compact /></div></div></section>
+      <section className="landing-section" id="pricing" aria-labelledby="pricing-title"><div className="landing-pricing"><div className="landing-pricing-copy"><span className="landing-section-label">جاهز للانطلاق؟</span><h2 id="pricing-title">ابدأ بقياس أثر أوضح اليوم.</h2><p>عرض تأسيسي محدود لمن يريد تجربة دورة العمل كاملة وبناء أساس منظم لقرارات التدريب في مدرسته.</p><div className="landing-actions"><Link className="button button-primary button-large" href="/auth/register">إنشاء حساب مدير <ArrowLeft size={17} /></Link></div></div><div className="landing-pricing-card"><LaunchAvailability totalSlots={availability.totalSlots} availableSlots={availability.availableSlots} price={availability.launchPrice} compact /></div></div></section>
 
       <section className="landing-section" aria-labelledby="promise-title"><div className="landing-plain-promise"><div><span className="landing-section-label">وعد أثر</span><h2 id="promise-title">لا نبيعك تعقيدًا إضافيًا.</h2><p>نرتب لك البيانات الموجودة أصلًا حتى تستطيع اتخاذ قرار تدريبي أفضل.</p></div><MessageSquareText size={39} color="var(--emerald)" aria-hidden="true" /></div></section>
 
