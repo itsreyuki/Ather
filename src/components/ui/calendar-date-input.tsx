@@ -54,7 +54,7 @@ function hijriToGregorian(value: string, fallbackTime: string, dateOnly: boolean
   const fallbackMinute = fallbackTime.slice(3, 5) || "0";
   const hour = dateOnly ? 0 : Number(match[4] ?? fallbackHour);
   const minute = dateOnly ? 0 : Number(match[5] ?? fallbackMinute);
-  if (month < 1 || month > 12 || day < 1 || day > 30 || hour > 23 || minute > 59) return null;
+  if (year < 1300 || year > 1600 || month < 1 || month > 12 || day < 1 || day > 30 || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
 
   const target = hijriKey({ year, month, day });
   let low = Date.UTC(year + 621, 0, 1);
@@ -109,16 +109,23 @@ export function CalendarDateInput({
 
   function onHijriChange(nextText: string) {
     setHijriText(nextText);
-    const converted = hijriToGregorian(nextText, currentValue.slice(11, 16) || "00:00", dateOnly);
+    setError("");
+  }
+
+  function commitHijri() {
+    const trimmed = hijriText.trim();
+    if (!trimmed) {
+      setError("");
+      commit("");
+      return;
+    }
+    const converted = hijriToGregorian(trimmed, currentValue.slice(11, 16) || "00:00", dateOnly);
     if (converted) {
       setError("");
       commit(converted);
-    } else if (nextText.trim()) {
+    } else {
       commit("");
       setError(dateOnly ? "اكتب التاريخ الهجري بصيغة 1447/01/15" : "اكتب التاريخ والوقت الهجريين بصيغة 1447/01/15 14:30");
-    } else {
-      setError("");
-      commit("");
     }
   }
 
@@ -146,16 +153,23 @@ export function CalendarDateInput({
             aria-label={`${label} ميلادي`}
           />
         ) : (
-          <input
-            value={hijriText}
-            onChange={(event) => onHijriChange(event.target.value)}
-            type="text"
-            inputMode="numeric"
-            placeholder={dateOnly ? "1447/01/15" : "1447/01/15 14:30"}
-            required={required}
-            aria-label={`${label} هجري`}
-            dir="ltr"
-          />
+          <div className="calendar-hijri-input-wrap">
+            <CalendarDays size={16} aria-hidden="true" />
+            <input
+              value={hijriText}
+              onChange={(event) => onHijriChange(event.target.value)}
+              onBlur={commitHijri}
+              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitHijri(); } }}
+              type="text"
+              inputMode="numeric"
+              placeholder={dateOnly ? "1447/01/15" : "1447/01/15 14:30"}
+              required={required}
+              aria-invalid={Boolean(error)}
+              aria-label={`${label} هجري`}
+              dir="ltr"
+            />
+            <span className="calendar-hijri-badge">أم القرى</span>
+          </div>
         )}
         {name && <input type="hidden" name={name} value={currentValue} />}
       </div>

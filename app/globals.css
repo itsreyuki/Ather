@@ -6,7 +6,6 @@
 @import "./product-polish.css";
 @import "./landing.css";
 @import "./admin.css";
-@import "./landing.css";
 
 :root {
   color-scheme: dark;
@@ -317,8 +316,11 @@ html { background: var(--background); }
 .nav-item:hover, .nav-item:focus-visible, .button-secondary:hover, .icon-button:hover { background: var(--surface-raised); border-color: var(--border); }
 .avatar, .school-avatar, .quick-icon { color: var(--emerald); background: var(--emerald-soft); }
 .icon-button, .button-secondary, .global-search-input { color: var(--text); background: var(--surface); border-color: var(--border); }
-.button-primary, .primary-button, .logo-symbol, .brand-icon { background: var(--emerald); color: var(--on-primary); }
+.button-primary, .primary-button { background: var(--emerald); color: var(--on-primary); }
+.button-primary svg, .primary-button svg { color: currentColor; }
 .button-primary:hover, .primary-button:hover { background: color-mix(in srgb, var(--emerald) 86%, white); }
+.button-primary:hover, .button-primary:focus-visible, .primary-button:hover, .primary-button:focus-visible { color: var(--on-primary); }
+.logo-symbol, .brand-icon { background: var(--emerald); color: var(--on-primary); }
 .button-danger { color: var(--on-primary); background: var(--danger); }
 .field label, .confirmation-check, .mobile-evaluation-card label, .criterion-editor-top, .teacher-general-rating > span { color: var(--text-soft); }
 .field input, .field select, .field textarea, .input-control, .mapping-row select, .cancel-workshop input, .bulk-tool select, .archive-filters select, .audit-filters input, .audit-filters select, .report-section-heading select, .report-filters select, .report-filters input, .save-template input { color: var(--text); background: var(--surface-deep); border-color: var(--border); }
@@ -434,6 +436,11 @@ html { background: var(--background); }
 .calendar-date-hint { color: var(--blue); font-size: 9px; line-height: 1.6; }
 .calendar-date-error { color: var(--danger); font-size: 9px; line-height: 1.6; }
 .calendar-date-field input[dir="ltr"] { text-align: left; letter-spacing: .03em; }
+.calendar-hijri-input-wrap { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-deep); color: var(--blue); direction: ltr; transition: border-color .15s, box-shadow .15s; }
+.calendar-hijri-input-wrap:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent); }
+.calendar-hijri-input-wrap input { flex: 1; min-width: 0; min-height: 40px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); text-align: left; letter-spacing: .04em; }
+.calendar-hijri-input-wrap input::placeholder { color: var(--muted); letter-spacing: 0; }
+.calendar-hijri-badge { flex: none; padding: 4px 7px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 9px; white-space: nowrap; }
 .plan-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
 .plan-card { color: var(--text); padding: 16px; display: grid; gap: 12px; text-decoration: none; transition: border-color .16s ease, transform .16s ease; }
 .plan-card:hover { border-color: var(--emerald); transform: translateY(-1px); }
