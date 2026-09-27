@@ -1,8 +1,11 @@
 import { createSession } from "./auth";
 import { db } from "./db";
 import { encryptField, hashPassword, normalizeEmail, normalizePhone, phoneLookupHash } from "./security";
+import { isLicenseCodeConfigured, isValidLicenseCode } from "./license";
 
-export async function registerManagerAccount(input: { email?: string; phone?: string; password: string; createManagerSession?: boolean }) {
+export async function registerManagerAccount(input: { email?: string; phone?: string; licenseCode: string; password: string; createManagerSession?: boolean }) {
+  if (!isLicenseCodeConfigured()) throw new Error("LICENSE_CODES_NOT_CONFIGURED");
+  if (!isValidLicenseCode(input.licenseCode)) throw new Error("INVALID_LICENSE_CODE");
   const email = input.email ? normalizeEmail(input.email) : undefined;
   const phone = input.phone ? normalizePhone(input.phone) : undefined;
   const identityFilters = [email ? { email } : undefined, phone ? { phoneLookupHash: phoneLookupHash(phone) } : undefined].filter((filter): filter is { email: string } | { phoneLookupHash: string } => Boolean(filter));

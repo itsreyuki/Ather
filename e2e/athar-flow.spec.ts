@@ -45,6 +45,7 @@ async function registerAndOnboard(page: Page, prefix: string, importStaff = true
   const teacherNationalId = `99${uniqueSuffix}`;
   await page.goto("/auth/register");
   await page.locator("#register-email").fill(email);
+  await page.locator("#register-licenseCode").fill("ATHAR-E2E-1234");
   await page.locator("#register-password").fill(registrationPassword);
   await page.locator("#register-confirmPassword").fill(registrationPassword);
   await page.locator("form.auth-form button[type=submit]").click();

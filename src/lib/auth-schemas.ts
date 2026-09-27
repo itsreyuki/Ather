@@ -3,7 +3,7 @@ import { z } from "zod";
 const password = z.string().min(8, "كلمة المرور يجب أن تكون 8 أحرف على الأقل").max(128);
 const contact = z.object({ email: z.string().email().optional(), phone: z.string().min(7).optional() }).refine((value) => Boolean(value.email) !== Boolean(value.phone), { message: "اختر بريدًا إلكترونيًا أو رقم جوال واحدًا" });
 
-export const registerSchema = contact.extend({ password, confirmPassword: z.string() }).refine((value) => value.password === value.confirmPassword, { message: "كلمتا المرور غير متطابقتين", path: ["confirmPassword"] });
+export const registerSchema = contact.extend({ licenseCode: z.string().trim().min(4, "كود الرخصة مطلوب").max(120), password, confirmPassword: z.string() }).refine((value) => value.password === value.confirmPassword, { message: "كلمتا المرور غير متطابقتين", path: ["confirmPassword"] });
 export const loginSchema = z.object({ identity: z.string().min(3), password });
 
 export const schoolOnboardingSchema = z.object({

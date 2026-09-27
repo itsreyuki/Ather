@@ -39,6 +39,7 @@ describe("impact metrics", () => {
     expect(
       registerSchema.safeParse({
         email: "admin@school.sa",
+        licenseCode: "ATHAR-TEST-1234",
         password: "password123",
         confirmPassword: "password123",
       }).success,

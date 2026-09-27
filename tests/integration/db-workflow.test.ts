@@ -12,6 +12,7 @@ import { db } from "../../src/lib/db";
 process.env.ID_LOOKUP_SECRET ??= Buffer.from("integration-id-lookup-secret-32-bytes").toString("base64");
 process.env.FIELD_ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString("base64");
 process.env.AUTH_SECRET ??= Buffer.from("integration-auth-secret-32-bytes-long").toString("base64");
+process.env.ATHAR_LICENSE_CODES ??= "ATHAR-INTEGRATION-1234";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const describeDatabase = enabled ? describe : describe.skip;
@@ -29,7 +30,7 @@ describeDatabase("Athar database workflow integration", () => {
   beforeAll(async () => {
     process.env.ATHAR_E2E = "true";
     process.env.ATHAR_TEST_NOW = "2026-08-15T09:00:00.000Z";
-    const registered = await registerManagerAccount({ email: `integration-${suffix}@example.test`, password: "Integration-password-123", createManagerSession: false });
+    const registered = await registerManagerAccount({ email: `integration-${suffix}@example.test`, licenseCode: "ATHAR-INTEGRATION-1234", password: "Integration-password-123", createManagerSession: false });
     const user = registered.user;
     userId = user.id;
     const school = await db.school.create({ data: { name: `Integration School ${suffix}`, slug: `integration-${suffix}`, ministryCode: `I-${suffix.slice(-20)}`, educationAdministration: "Integration Admin", region: "Test Region", city: "Test City", educationStage: "PRIMARY", schoolType: "GOVERNMENT", genderType: "MIXED", principalName: "Integration Principal" } });

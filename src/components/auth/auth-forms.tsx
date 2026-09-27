@@ -3,6 +3,8 @@
 import { ArrowRight, Mail, Smartphone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ContactDialog } from "@/src/components/landing/contact-dialog";
+import { LANDING_CONFIG } from "@/src/config/landing";
 
 type ContactMode = "email" | "phone";
 
@@ -30,13 +32,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "");
     const phone = String(form.get("phone") ?? "");
+    const licenseCode = String(form.get("licenseCode") ?? "");
     const password = String(form.get("password") ?? "");
 
     try {
       const payload = mode === "login"
         ? { identity: contactMode === "email" ? email : phone, password }
-        : {
+          : {
             ...(contactMode === "email" ? { email } : { phone }),
+            licenseCode,
             password,
             confirmPassword: String(form.get("confirmPassword") ?? ""),
           };
@@ -78,6 +82,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <div className="field">
           <label htmlFor="register-confirmPassword">تأكيد كلمة المرور</label>
           <input id="register-confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required placeholder="أعد كتابة كلمة المرور" />
+        </div>
+      )}
+      {mode === "register" && (
+        <div className="field license-code-field">
+          <label htmlFor="register-licenseCode">كود الرخصة</label>
+          <input id="register-licenseCode" name="licenseCode" type="text" autoComplete="off" required spellCheck={false} placeholder="أدخل الكود المستلم بعد الدفع" />
+          <span className="field-hint">يتم تسليم كود الرخصة لك بعد إتمام الدفع.</span>
+          <ContactDialog phone={LANDING_CONFIG.contactPhone} whatsappNumber={LANDING_CONFIG.whatsappNumber} whatsappMessage={LANDING_CONFIG.whatsappMessage} label="لا أملك كود الرخصة؟ تواصل معنا" />
         </div>
       )}
       {error && <div className="form-error" role="alert">{error}</div>}
