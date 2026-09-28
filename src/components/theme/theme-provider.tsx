@@ -11,12 +11,12 @@ export const themeOptions = [
 
 export type ThemeId = (typeof themeOptions)[number]["id"];
 const storageKey = "athar-theme";
-const ThemeContext = createContext<{ theme: ThemeId; setTheme: (theme: ThemeId) => void }>({ theme: "dark", setTheme: () => undefined });
+const ThemeContext = createContext<{ theme: ThemeId; setTheme: (theme: ThemeId) => void }>({ theme: "light", setTheme: () => undefined });
 
 function isTheme(value: string | null): value is ThemeId { return themeOptions.some((option) => option.id === value); }
 function applyTheme(theme: ThemeId) { document.documentElement.dataset.theme = theme; }
 
-let currentTheme: ThemeId = "dark";
+let currentTheme: ThemeId = "light";
 const subscribers = new Set<() => void>();
 if (typeof window !== "undefined") {
   const saved = window.localStorage.getItem(storageKey);
@@ -24,12 +24,12 @@ if (typeof window !== "undefined") {
 }
 function subscribe(listener: () => void) {
   subscribers.add(listener);
-  const onStorage = () => { const saved = window.localStorage.getItem(storageKey); currentTheme = isTheme(saved) ? saved : "dark"; listener(); };
+  const onStorage = () => { const saved = window.localStorage.getItem(storageKey); currentTheme = isTheme(saved) ? saved : "light"; listener(); };
   window.addEventListener("storage", onStorage);
   return () => { subscribers.delete(listener); window.removeEventListener("storage", onStorage); };
 }
 function getSnapshot() { return currentTheme; }
-function getServerSnapshot(): ThemeId { return "dark"; }
+function getServerSnapshot(): ThemeId { return "light"; }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

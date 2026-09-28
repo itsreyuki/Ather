@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('athar-theme');if(['dark','light','official','pink'].includes(t))document.documentElement.dataset.theme=t}catch(e){}" }} />
+        <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('athar-theme');document.documentElement.dataset.theme=['dark','light','official','pink'].includes(t)?t:'light'}catch(e){document.documentElement.dataset.theme='light'}" }} />
       </head>
       <body>
         <AmbientBackground />
