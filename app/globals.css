@@ -317,10 +317,10 @@ html { background: var(--background); }
 .nav-item:hover, .nav-item:focus-visible, .button-secondary:hover, .icon-button:hover { background: var(--surface-raised); border-color: var(--border); }
 .avatar, .school-avatar, .quick-icon { color: var(--emerald); background: var(--emerald-soft); }
 .icon-button, .button-secondary, .global-search-input { color: var(--text); background: var(--surface); border-color: var(--border); }
-.button-primary, .primary-button { background: var(--emerald); color: var(--on-primary); }
+.button-primary, .primary-button { background: var(--emerald); color: var(--on-primary) !important; -webkit-text-fill-color: var(--on-primary); text-shadow: none; }
 .button-primary svg, .primary-button svg { color: currentColor; }
-.button-primary:hover, .primary-button:hover { background: color-mix(in srgb, var(--emerald) 86%, white); }
-.button-primary:hover, .button-primary:focus-visible, .primary-button:hover, .primary-button:focus-visible { color: var(--on-primary); }
+.button-primary:hover, .primary-button:hover { background: color-mix(in srgb, var(--emerald) 86%, white); color: var(--on-primary) !important; }
+.button-primary:focus-visible, .primary-button:focus-visible { color: var(--on-primary) !important; }
 .brand-icon { background: var(--emerald); color: var(--on-primary); }
 .button-danger { color: var(--on-primary); background: var(--danger); }
 .field label, .confirmation-check, .mobile-evaluation-card label, .criterion-editor-top, .teacher-general-rating > span { color: var(--text-soft); }
@@ -360,7 +360,7 @@ html { background: var(--background); }
 .selection-summary, .selection-summary strong { color: var(--emerald); }
 .participant-option.selected { background: color-mix(in srgb, var(--emerald) 10%, var(--surface)); border-color: var(--emerald); }
 .rating-options button, .evaluation-table td input, .mobile-evaluation-card input { color: var(--text); background: var(--surface-deep); border-color: var(--border); }
-.rating-options button.selected { color: var(--on-primary); background: var(--emerald); }
+.rating-options button.selected { color: var(--on-primary) !important; -webkit-text-fill-color: var(--on-primary); background: var(--emerald); }
 .evaluation-table thead th { border-color: var(--divider); }
 .evaluation-table tbody th { background: var(--surface); color: var(--text); }
 .post-cta, .teacher-reminder-card, .workshop-countdown { color: var(--text); background: color-mix(in srgb, var(--blue) 10%, var(--surface)); border-color: color-mix(in srgb, var(--blue) 40%, var(--border)); }
