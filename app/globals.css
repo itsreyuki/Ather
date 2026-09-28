@@ -7,6 +7,14 @@
 @import "./landing.css";
 @import "./admin.css";
 
+@font-face {
+  font-family: "AtharDisplay";
+  src: url("../src/assets/alfont_com_IBMPlexSansArabic-Bold.ttf") format("truetype");
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --background: #0b0f0e;
@@ -73,6 +81,7 @@
 }
 
 * { box-sizing: border-box; }
+h1, h2, h3, h4, .page-title, .hero-copy h1, .landing-hero h1, .landing-section-heading h2, .landing-pricing-copy h2, .landing-final-cta h2, .auth-card h1, .onboarding-heading h1, .wizard-top h1, .panel-title, .section-title, .eyebrow, .landing-eyebrow, .landing-section-label, .landing-hero-badge, .stat-value, .impact-value { font-family: "AtharDisplay", Arial, "Noto Sans Arabic", sans-serif; }
 html { background: var(--background); }
 body {
   margin: 0;

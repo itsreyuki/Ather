@@ -12,6 +12,11 @@ Font.register({
   fontWeight: 400,
 });
 Font.register({
+  family: "AtharDisplayPlan",
+  src: path.join(process.cwd(), "src/assets/alfont_com_IBMPlexSansArabic-Bold.ttf"),
+  fontWeight: 700,
+});
+Font.register({
   family: "NotoArabicPlan",
   src: path.join(
     process.cwd(),
@@ -33,14 +38,14 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: "row", alignItems: "center", gap: 7 },
   logoImage: { width: 28, height: 28, objectFit: "contain" },
   brand: { color: "#168657", fontSize: 19, fontWeight: 700 },
-  title: { color: "#123b29", fontSize: 16, fontWeight: 700, marginTop: 8 },
+  title: { color: "#123b29", fontSize: 16, fontWeight: 700, marginTop: 8, fontFamily: "AtharDisplayPlan" },
   muted: { color: "#607168", marginTop: 3, fontSize: 8 },
   metrics: { flexDirection: "row", gap: 8, marginBottom: 18 },
   metric: { flex: 1, padding: 8, border: "1pt solid #dce7e1", borderRadius: 5, backgroundColor: "#f8fbf9" },
   metricLabel: { color: "#607168", fontSize: 7 },
   metricValue: { color: "#168657", fontSize: 14, fontWeight: 700, marginTop: 4 },
   section: { marginTop: 14 },
-  sectionTitle: { fontSize: 12, fontWeight: 700, color: "#123b29", marginBottom: 7 },
+  sectionTitle: { fontSize: 12, fontWeight: 700, color: "#123b29", marginBottom: 7, fontFamily: "AtharDisplayPlan" },
   table: { border: "1pt solid #dce7e1", borderRadius: 4 },
   row: { flexDirection: "row", minHeight: 24, alignItems: "center", borderBottom: "1pt solid #e5ede8" },
   headerRow: { backgroundColor: "#edf6f1" },

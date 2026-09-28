@@ -6,6 +6,7 @@ import { atharLogoDataUri } from "./brand-assets";
 
 Font.register({ family: "NotoArabic", src: path.join(process.cwd(), "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff"), fontWeight: 400 });
 Font.register({ family: "NotoArabic", src: path.join(process.cwd(), "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-700-normal.woff"), fontWeight: 700 });
+Font.register({ family: "AtharDisplay", src: path.join(process.cwd(), "src/assets/alfont_com_IBMPlexSansArabic-Bold.ttf"), fontWeight: 700 });
 
 const styles = StyleSheet.create({
   page: { paddingTop: 30, paddingBottom: 42, paddingHorizontal: 30, fontFamily: "NotoArabic", fontSize: 9, color: "#17221d", backgroundColor: "#ffffff", direction: "rtl" },
@@ -14,10 +15,10 @@ const styles = StyleSheet.create({
   logoImage: { width: 30, height: 30, objectFit: "contain" },
   logoText: { fontSize: 14, fontWeight: 700, lineHeight: 1.1 },
   logoLatin: { color: "#6b7b73", fontFamily: "Helvetica", fontSize: 6, letterSpacing: 1.6 },
-  headerTitle: { textAlign: "left", fontSize: 17, fontWeight: 700, color: "#123b29" },
+  headerTitle: { textAlign: "left", fontSize: 17, fontWeight: 700, color: "#123b29", fontFamily: "AtharDisplay" },
   headerMeta: { textAlign: "left", color: "#6b7b73", fontSize: 8, marginTop: 3 },
   section: { marginTop: 18 },
-  sectionTitle: { fontSize: 12, fontWeight: 700, color: "#123b29", marginBottom: 8 },
+  sectionTitle: { fontSize: 12, fontWeight: 700, color: "#123b29", marginBottom: 8, fontFamily: "AtharDisplay" },
   sectionNote: { color: "#6b7b73", fontSize: 8, marginBottom: 8 },
   infoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   infoItem: { width: "31%", minWidth: 0, minHeight: 38, border: "1pt solid #e1ebe6", borderRadius: 5, padding: 7 },
