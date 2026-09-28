@@ -1,10 +1,10 @@
 .teacher-auth-card { max-width: 470px; }
 .teacher-brand { display: block; margin-bottom: 24px; }
 .teacher-brand .logo { gap: 9px; }
-.teacher-brand .logo-symbol { width: 40px; height: 40px; }
+.teacher-brand .logo-symbol { width: 54px; height: 54px; }
 .teacher-brand .logo-copy strong { font-size: 24px; }
 .teacher-home-brand { gap: 9px; }
-.teacher-home-brand .logo-symbol { width: 38px; height: 38px; }
+.teacher-home-brand .logo-symbol { width: 46px; height: 46px; }
 .teacher-home-brand .logo-copy strong { font-size: 21px; }
 .teacher-intro { display: flex; align-items: flex-start; gap: 12px; margin-top: 24px; }
 .teacher-intro h1 { margin: 0; font-size: 22px; }

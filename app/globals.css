@@ -186,11 +186,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .workshop-delete-panel { padding: 10px 0 0; }
 .button-large { min-height: 48px; padding: 12px 18px; }
 .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; }
-.logo-symbol { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; overflow: hidden; padding: 4px; background: color-mix(in srgb, var(--emerald) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--emerald) 55%, var(--border)); }
+.logo-symbol { width: 50px; height: 50px; display: grid; place-items: center; overflow: hidden; padding: 0; background: transparent; border: 0; }
 .logo-image { display: block; width: 100%; height: 100%; object-fit: contain; }
 .logo-copy { display: grid; line-height: 1; gap: 4px; }
-.logo-copy strong { font-size: 20px; }
-.logo-copy small { font-size: 9px; color: var(--muted); letter-spacing: .2em; direction: ltr; }
+.logo-copy strong { font-size: 23px; }
+.logo-copy small { font-size: 10px; color: var(--muted); letter-spacing: .2em; direction: ltr; }
 .public-page { min-height: 100vh; max-width: 1180px; margin: auto; padding: 26px clamp(18px, 4vw, 54px) 20px; display: flex; flex-direction: column; }
 .public-nav { display: flex; justify-content: space-between; align-items: center; }
 .public-nav-actions { display: flex; align-items: center; gap: 20px; }
@@ -321,7 +321,7 @@ html { background: var(--background); }
 .button-primary svg, .primary-button svg { color: currentColor; }
 .button-primary:hover, .primary-button:hover { background: color-mix(in srgb, var(--emerald) 86%, white); }
 .button-primary:hover, .button-primary:focus-visible, .primary-button:hover, .primary-button:focus-visible { color: var(--on-primary); }
-.logo-symbol, .brand-icon { background: var(--emerald); color: var(--on-primary); }
+.brand-icon { background: var(--emerald); color: var(--on-primary); }
 .button-danger { color: var(--on-primary); background: var(--danger); }
 .field label, .confirmation-check, .mobile-evaluation-card label, .criterion-editor-top, .teacher-general-rating > span { color: var(--text-soft); }
 .field input, .field select, .field textarea, .input-control, .mapping-row select, .cancel-workshop input, .bulk-tool select, .archive-filters select, .audit-filters input, .audit-filters select, .report-section-heading select, .report-filters select, .report-filters input, .save-template input { color: var(--text); background: var(--surface-deep); border-color: var(--border); }
