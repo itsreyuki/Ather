@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowLeft, BarChart3, CheckCircle2, ClipboardCheck, FileSpreadsheet, FileText, Gauge, GraduationCap, LayoutDashboard, LockKeyhole, MessageSquareText, School, ShieldCheck, Sparkles, Target, Users, Workflow, X } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/src/components/brand/logo";
 import { LandingNavbar } from "@/src/components/landing/landing-navbar";
 import { LaunchAvailability } from "@/src/components/landing/launch-availability";
 import { StickyCta } from "@/src/components/landing/sticky-cta";
@@ -53,7 +54,7 @@ export default async function HomePage() {
 
       <section className="landing-final-cta" aria-labelledby="final-title"><span className="landing-section-label">أثر · من البيانات إلى القرار</span><h2 id="final-title">ابدأ من ورشة واحدة.</h2><p>ابنِ أول قياس لك، ثم دع البيانات توضح لك أين يستحق التدريب أن يستمر.</p><div className="landing-actions"><Link className="button button-primary button-large" href="/auth/register">ابدأ الآن <ArrowLeft size={17} /></Link><Link className="button button-secondary button-large" href="/auth/login">لدي حساب بالفعل</Link></div></section>
     </div>
-    <footer className="landing-footer"><div className="landing-shell"><div className="landing-footer-grid"><div><Link href="/"><span className="logo"><span className="logo-symbol">أ</span><span className="logo-copy"><strong>أثر</strong><small>ATHAR</small></span></span></Link><p>منصة عربية لقياس أثر الورش والبرامج التدريبية في المدارس.</p></div><div className="landing-footer-links"><Link href="/privacy">الخصوصية</Link><Link href="/terms">الشروط</Link><Link href="/auth/login">تسجيل الدخول</Link></div></div><small>© {new Date().getFullYear()} أثر. جميع الحقوق محفوظة.</small></div></footer>
+    <footer className="landing-footer"><div className="landing-shell"><div className="landing-footer-grid"><div><Logo href="/" /><p>منصة عربية لقياس أثر الورش والبرامج التدريبية في المدارس.</p></div><div className="landing-footer-links"><Link href="/privacy">الخصوصية</Link><Link href="/terms">الشروط</Link><Link href="/auth/login">تسجيل الدخول</Link></div></div><small>© {new Date().getFullYear()} أثر. جميع الحقوق محفوظة.</small></div></footer>
     <StickyCta {...contactProps} />
   </main>;
 }

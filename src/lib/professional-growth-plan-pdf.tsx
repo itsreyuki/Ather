@@ -1,5 +1,7 @@
+/* eslint-disable jsx-a11y/alt-text */
 import path from "node:path";
-import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { atharLogoDataUri } from "./brand-assets";
 
 Font.register({
   family: "NotoArabicPlan",
@@ -28,6 +30,8 @@ const styles = StyleSheet.create({
     direction: "rtl",
   },
   header: { borderBottom: "1pt solid #dce7e1", paddingBottom: 13, marginBottom: 16 },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  logoImage: { width: 28, height: 28, objectFit: "contain" },
   brand: { color: "#168657", fontSize: 19, fontWeight: 700 },
   title: { color: "#123b29", fontSize: 16, fontWeight: 700, marginTop: 8 },
   muted: { color: "#607168", marginTop: 3, fontSize: 8 },
@@ -82,7 +86,7 @@ export function ProfessionalGrowthPlanPdfDocument({
     <Document title={`تقرير خطة النمو المهني - ${String(plan.title ?? "")}`} author="ATHAR" language="ar-SA">
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header}>
-          <Text style={styles.brand}>أثر · ATHAR</Text>
+          <View style={styles.brandRow}><Image src={atharLogoDataUri()} style={styles.logoImage} /><Text style={styles.brand}>أثر · ATHAR</Text></View>
           <Text style={styles.title}>تقرير خطة النمو المهني</Text>
           <Text style={styles.muted}>
             {String(school.name ?? "المدرسة")} · {String(plan.title ?? "الخطة")} ·{" "}

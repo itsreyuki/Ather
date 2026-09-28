@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
     "/api/dashboard/workshops/*/report/export": [
       "./node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff",
       "./node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-700-normal.woff",
+      "./src/assets/logo.png",
+    ],
+    "/api/dashboard/professional-growth-plans/*/report/export": [
+      "./node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff",
+      "./node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-700-normal.woff",
+      "./src/assets/logo.png",
     ],
   },
 };

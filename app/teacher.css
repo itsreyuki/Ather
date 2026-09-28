@@ -1,7 +1,11 @@
 .teacher-auth-card { max-width: 470px; }
-.teacher-brand, .teacher-home-brand { display: inline-flex; align-items: baseline; gap: 9px; color: var(--text); font-weight: 800; letter-spacing: -.05em; }
-.teacher-brand span, .teacher-home-brand span { font-size: 25px; }
-.teacher-brand small, .teacher-home-brand small { color: var(--emerald); font-size: 9px; letter-spacing: .2em; }
+.teacher-brand { display: block; margin-bottom: 24px; }
+.teacher-brand .logo { gap: 9px; }
+.teacher-brand .logo-symbol { width: 40px; height: 40px; }
+.teacher-brand .logo-copy strong { font-size: 24px; }
+.teacher-home-brand { gap: 9px; }
+.teacher-home-brand .logo-symbol { width: 38px; height: 38px; }
+.teacher-home-brand .logo-copy strong { font-size: 21px; }
 .teacher-intro { display: flex; align-items: flex-start; gap: 12px; margin-top: 24px; }
 .teacher-intro h1 { margin: 0; font-size: 22px; }
 .teacher-intro p { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 7px 0 0; }

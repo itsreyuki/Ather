@@ -72,7 +72,8 @@
   }
   .print-report-document *, .print-report-document *::before, .print-report-document *::after { box-sizing: border-box; }
   .print-document-header { display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: start; gap: 12pt; padding-bottom: 13pt; border-bottom: 1pt solid #b9cabe; }
-  .print-document-logo { display: flex; align-items: baseline; gap: 5pt; color: #146c48; }
+  .print-document-logo { display: flex; align-items: center; gap: 6pt; color: #146c48; }
+  .print-document-logo-image { width: 26pt !important; height: 26pt !important; object-fit: contain; }
   .print-document-logo strong { font-size: 21pt; line-height: 1; }
   .print-document-logo span { color: #6a7a71; direction: ltr; font-size: 6pt; letter-spacing: .16em; }
   .print-document-title { text-align: center; }

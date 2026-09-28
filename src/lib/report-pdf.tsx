@@ -1,6 +1,8 @@
+/* eslint-disable jsx-a11y/alt-text */
 import path from "node:path";
-import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ReportPayload } from "./reporting";
+import { atharLogoDataUri } from "./brand-assets";
 
 Font.register({ family: "NotoArabic", src: path.join(process.cwd(), "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff"), fontWeight: 400 });
 Font.register({ family: "NotoArabic", src: path.join(process.cwd(), "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-700-normal.woff"), fontWeight: 700 });
@@ -9,7 +11,7 @@ const styles = StyleSheet.create({
   page: { paddingTop: 30, paddingBottom: 42, paddingHorizontal: 30, fontFamily: "NotoArabic", fontSize: 9, color: "#17221d", backgroundColor: "#ffffff", direction: "rtl" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 15, borderBottom: "1pt solid #dce7e1" },
   logo: { flexDirection: "row", alignItems: "center", gap: 7 },
-  logoMark: { width: 28, height: 28, borderRadius: 7, backgroundColor: "#26b879", color: "#06120d", textAlign: "center", paddingTop: 5, fontSize: 15, fontWeight: 700 },
+  logoImage: { width: 30, height: 30, objectFit: "contain" },
   logoText: { fontSize: 14, fontWeight: 700, lineHeight: 1.1 },
   logoLatin: { color: "#6b7b73", fontFamily: "Helvetica", fontSize: 6, letterSpacing: 1.6 },
   headerTitle: { textAlign: "left", fontSize: 17, fontWeight: 700, color: "#123b29" },
@@ -71,7 +73,7 @@ export function ReportPdfDocument({ payload, reportId }: { payload: ReportPayloa
   const school = payload.school;
   return <Document title={`تقرير أثر - ${workshop?.title ?? "ورشة"}`} author="ATHAR" language="ar-SA"><Page size="A4" style={styles.page} wrap>
     <View style={styles.header}>
-      <View style={styles.logo}><Text style={styles.logoMark}>أ</Text><View><Text style={styles.logoText}>أثر</Text><Text style={styles.logoLatin}>ATHAR</Text></View></View>
+      <View style={styles.logo}><Image src={atharLogoDataUri()} style={styles.logoImage} /><View><Text style={styles.logoText}>أثر</Text><Text style={styles.logoLatin}>ATHAR</Text></View></View>
       <View><Text style={styles.headerTitle}>تقرير أثر الورشة</Text><Text style={styles.headerMeta}>رقم التقرير: {reportId}</Text><Text style={styles.headerMeta}>تاريخ الإصدار: {date(payload.generatedAt)}</Text></View>
     </View>
 

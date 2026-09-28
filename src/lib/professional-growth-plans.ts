@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { readAtharLogoBuffer } from "./brand-assets";
 import { Prisma, ProfessionalGrowthPlanStatus, ProgramType, WorkshopStatus } from "@prisma/client";
 import { db } from "./db";
 import { exportSafeSpreadsheetValue } from "./staff-import";
@@ -315,6 +316,9 @@ export async function createProfessionalPlanWorkbook(snapshot: Record<string, un
   const plan = snapshot.plan as { title?: string; periodLabel?: string } | undefined;
   const summary = snapshot.summary as Record<string, unknown> | undefined;
   const sheet = workbook.addWorksheet("ملخص الخطة");
+  const logoId = workbook.addImage({ base64: `data:image/png;base64,${readAtharLogoBuffer().toString("base64")}`, extension: "png" });
+  sheet.addImage(logoId, { tl: { col: 2.55, row: 0.05 }, ext: { width: 42, height: 42 } });
+  sheet.getRow(1).height = 40;
   sheet.views = [{ rightToLeft: true }];
   sheet.addRows([
     ["الحقل", "القيمة"],

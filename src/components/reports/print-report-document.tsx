@@ -1,3 +1,5 @@
+import Image from "next/image";
+import logoImage from "@/src/assets/logo.png";
 import { buildExecutiveSummary, buildReportInsights, resolveImpactBand, type ReportPayload } from "@/src/lib/reporting";
 
 const numberFormatter = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
@@ -38,7 +40,7 @@ export function PrintReportDocument({ payload, reportId }: { payload: ReportPayl
 
   return <article className="print-report-document" aria-label="نسخة التقرير المخصصة للطباعة">
     <header className="print-document-header">
-      <div className="print-document-logo"><strong>أثر</strong><span>ATHAR</span></div>
+      <div className="print-document-logo"><Image className="print-document-logo-image" src={logoImage} alt="أثر" width={36} height={36} /><div><strong>أثر</strong><span>ATHAR</span></div></div>
       <div className="print-document-title"><h1>تقرير أثر الورشة</h1><p>تقرير رسمي ثابت مبني على بيانات القياس المحفوظة عند الاعتماد</p></div>
       <div className="print-document-id"><span>رقم التقرير</span><strong>{reportId}</strong><small>{date(payload.generatedAt)}</small></div>
     </header>

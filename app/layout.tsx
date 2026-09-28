@@ -3,10 +3,12 @@ import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme/theme-provider";
 import { ThemeSwitcher } from "@/src/components/theme/theme-switcher";
 import { AmbientBackground } from "@/src/components/layout/ambient-background";
+import logoImage from "@/src/assets/logo.png";
 
 export const metadata: Metadata = {
   title: "أثر | قياس الأثر التدريبي",
   description: "منصة عربية لقياس أثر الورش والبرامج التدريبية على منسوبي المدارس.",
+  icons: { icon: logoImage.src, apple: logoImage.src },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

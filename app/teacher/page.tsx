@@ -1,6 +1,7 @@
 import { CalendarDays, CheckCircle2, Clock3, GraduationCap, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { TeacherLogin, TeacherLogoutButton } from "@/src/components/teacher/teacher-portal";
+import { Logo } from "@/src/components/brand/logo";
 import { db } from "@/src/lib/db";
 import { getWorkshopEffectiveState } from "@/src/lib/workshop";
 import { getTeacherSessionContext } from "@/src/lib/teacher-session";
@@ -26,7 +27,7 @@ async function TeacherHome({ session }: { session: NonNullable<Awaited<ReturnTyp
   const ongoing = grouped.filter(({ state }) => state === "IN_PROGRESS");
   const pending = grouped.filter(({ state, item }) => state === "IN_PROGRESS" && !submittedIds.has(item.id));
   const completed = grouped.filter(({ state }) => state === "COMPLETED");
-  return <main className="teacher-home"><header className="teacher-home-header"><div className="teacher-home-brand"><span>أثر</span><small>ATHAR</small></div><div className="teacher-home-user"><div><strong>{session.staff.fullName}</strong><small>{session.school.name}</small></div><TeacherLogoutButton /></div></header><section className="teacher-welcome"><div><span className="eyebrow">بوابة المنسوبين</span><h1>مرحبًا، {session.staff.fullName}</h1><p>تابع الورش المرتبطة بسجلك وشارك في قياس أثر التدريب.</p></div><div className="teacher-welcome-mark"><CalendarDays size={26} /></div></section><div className="teacher-home-grid"><Section icon={<Clock3 size={17} />} title="الورش القادمة" items={upcoming} empty="لا توجد ورش قادمة مرتبطة بسجلك." /><Section icon={<Clock3 size={17} />} title="الورش الجارية" items={ongoing} empty="لا توجد ورش جارية حاليًا." /><Section icon={<CheckCircle2 size={17} />} title="ورش بانتظار تقييمك" items={pending} empty="لا توجد تقييمات مطلوبة منك حاليًا." /><Section icon={<CheckCircle2 size={17} />} title="الورش المكتملة" items={completed} empty="ستظهر هنا الورش التي شاركت بها بعد اكتمالها." /></div></main>;
+  return <main className="teacher-home"><header className="teacher-home-header"><Logo href="/teacher" className="teacher-home-brand" /><div className="teacher-home-user"><div><strong>{session.staff.fullName}</strong><small>{session.school.name}</small></div><TeacherLogoutButton /></div></header><section className="teacher-welcome"><div><span className="eyebrow">بوابة المنسوبين</span><h1>مرحبًا، {session.staff.fullName}</h1><p>تابع الورش المرتبطة بسجلك وشارك في قياس أثر التدريب.</p></div><div className="teacher-welcome-mark"><CalendarDays size={26} /></div></section><div className="teacher-home-grid"><Section icon={<Clock3 size={17} />} title="الورش القادمة" items={upcoming} empty="لا توجد ورش قادمة مرتبطة بسجلك." /><Section icon={<Clock3 size={17} />} title="الورش الجارية" items={ongoing} empty="لا توجد ورش جارية حاليًا." /><Section icon={<CheckCircle2 size={17} />} title="ورش بانتظار تقييمك" items={pending} empty="لا توجد تقييمات مطلوبة منك حاليًا." /><Section icon={<CheckCircle2 size={17} />} title="الورش المكتملة" items={completed} empty="ستظهر هنا الورش التي شاركت بها بعد اكتمالها." /></div></main>;
 }
 
 export default async function TeacherPage() {

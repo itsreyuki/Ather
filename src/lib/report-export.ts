@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { exportSafeSpreadsheetValue } from "./staff-import";
 import type { ReportPayload } from "./reporting";
+import { readAtharLogoBuffer } from "./brand-assets";
 
 const numberFormatter = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 const dateFormatter = new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" });
@@ -60,6 +61,9 @@ export async function createReportWorkbook(input: { payload: ReportPayload; repo
   workbook.modified = new Date();
 
   const summary = workbook.addWorksheet("Summary");
+  const logoId = workbook.addImage({ base64: `data:image/png;base64,${readAtharLogoBuffer().toString("base64")}`, extension: "png" });
+  summary.addImage(logoId, { tl: { col: 2.55, row: 0.05 }, ext: { width: 42, height: 42 } });
+  summary.getRow(1).height = 40;
   const workshop = payload.workshop;
   const school = payload.school;
   addKeyValueRows(summary, [
