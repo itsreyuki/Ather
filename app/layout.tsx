@@ -7,7 +7,7 @@ import logoImage from "@/src/assets/logo.png";
 
 export const metadata: Metadata = {
   title: "أثر | قياس الأثر التدريبي",
-  description: "منصة عربية لقياس أثر الورش والبرامج التدريبية على منسوبي المدارس.",
+  description: "منصة سعودية لقياس أثر الورش والبرامج التدريبية على منسوبي المدارس.",
   icons: { icon: logoImage.src, apple: logoImage.src },
 };
 
